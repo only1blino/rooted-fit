@@ -1,6 +1,7 @@
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users } from "../drizzle/schema";
+import { exerciseLogs } from "../drizzle/exercise-logs.schema";
 import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -87,6 +88,26 @@ export async function getUserByOpenId(openId: string) {
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
 
   return result.length > 0 ? result[0] : undefined;
+}
+
+export async function listExerciseLogsForUser(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(exerciseLogs).where(eq(exerciseLogs.userId, userId)).orderBy(desc(exerciseLogs.performedAt)).limit(100);
+}
+
+export async function createExerciseLogForUser(input: { userId: number; workoutId: string; exerciseName: string; setNumber: number; repCount: number; weightUsedKg?: number | null }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available for exercise-log sync");
+  await db.insert(exerciseLogs).values({
+    userId: input.userId,
+    workoutId: input.workoutId,
+    exerciseName: input.exerciseName,
+    setNumber: input.setNumber,
+    repCount: input.repCount,
+    weightUsedKg: input.weightUsedKg === null || input.weightUsedKg === undefined ? null : input.weightUsedKg.toFixed(2),
+  });
+  return { success: true } as const;
 }
 
 // TODO: add feature queries here as your schema grows.

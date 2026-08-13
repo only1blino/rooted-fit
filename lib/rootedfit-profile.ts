@@ -122,6 +122,7 @@ export type MealSwap = { slotKey: string; recipeIndex: number };
 export type WorkoutSessionState = { workoutId: string; saved: boolean; completedAt: string | null };
 export type DailyWaterLog = { date: string; millilitres: number };
 export type GroceryChecklistItem = { key: string; checked: boolean };
+export type LocalExerciseLog = { id: string; workoutId: string; exerciseName: string; setNumber: number; repCount: number; weightUsedKg: number | null; loggedAt: string };
 
 export const profileStorageKey = "rootedfit.profile.v2";
 const legacyProfileStorageKey = "rootedfit.profile.v1";
@@ -132,6 +133,7 @@ export const mealSwapsStorageKey = "rootedfit.meal-swaps.v1";
 export const workoutSessionsStorageKey = "rootedfit.workout-sessions.v1";
 export const waterLogsStorageKey = "rootedfit.water-logs.v1";
 export const groceryChecklistStorageKey = "rootedfit.grocery-checklist.v1";
+export const exerciseLogsStorageKey = "rootedfit.exercise-logs.v1";
 
 export const emptyProfile: UserProfile = {
   city: "",
@@ -264,6 +266,38 @@ export function formatGroceryChecklistPrintHtml(plan: WeeklyPlan, city = "your a
   return `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>@page{margin:22px}body{font-family:Arial,sans-serif;color:#1f2a25}h1{color:#2d6a4f;margin-bottom:4px}p{color:#526259}h2{font-size:15px;border-bottom:1px solid #dce6db;padding-bottom:5px;margin-top:20px}ul{list-style:none;padding:0}li{font-size:14px;line-height:1.65}</style></head><body><h1>RootedFit grocery checklist</h1><p>${escape(plan.rotationLabel)} · ${escape(city || "Your area")}</p>${groups}</body></html>`;
 }
 
+export function findSimilarRecipe(plan: WeeklyPlan, sourceTitle: string, breakfast: boolean) {
+  const pool = breakfast ? plan.breakfastMeals : plan.meals;
+  if (pool.length < 2) return null;
+  const currentIndex = Math.max(0, pool.findIndex((meal) => meal.sourceTitle === sourceTitle));
+  for (let offset = 1; offset < pool.length; offset += 1) {
+    const candidate = pool[(currentIndex + offset) % pool.length];
+    if (candidate.sourceTitle !== sourceTitle) return candidate;
+  }
+  return null;
+}
+
+export function categorizeGroceryItems(items: string[]): ShoppingGroup[] {
+  const categories: Record<string, string[]> = {
+    "Fruit & vegetables": [],
+    "Protein, beans & dairy": [],
+    "Grains, roots & bread": [],
+    "Oils, herbs & pantry": [],
+    "Other recipe items": [],
+  };
+  const rules: { title: keyof typeof categories; pattern: RegExp }[] = [
+    { title: "Fruit & vegetables", pattern: /tomato|onion|pepper|cabbage|carrot|spinach|greens|ugu|efo|kontomire|kale|sukuma|cucumber|plantain|yam|sweet potato|fruit|mango|orange|banana|avocado|scent leaf|parsley|garlic/i },
+    { title: "Protein, beans & dairy", pattern: /egg|chicken|fish|catfish|beans|lentil|tofu|yoghurt|milk|groundnut|seeds|crayfish/i },
+    { title: "Grains, roots & bread", pattern: /rice|oats|bread|chapati|flatbread|semo|pap|maize|flour|yam|plantain|potato/i },
+    { title: "Oils, herbs & pantry", pattern: /oil|curry|thyme|salt|spice|cumin|coriander|ginger|chili|groundnut paste/i },
+  ];
+  items.forEach((item) => {
+    const category = rules.find((rule) => rule.pattern.test(item))?.title ?? "Other recipe items";
+    categories[category].push(item);
+  });
+  return Object.entries(categories).filter(([, categoryItems]) => categoryItems.length > 0).map(([title, categoryItems]) => ({ title, items: categoryItems }));
+}
+
 function movementAdaptation(profile: UserProfile) {
   const parts: string[] = [];
   if (profile.workoutResources.includes("Yoga mat")) parts.push("Use your mat for floor work.");
@@ -310,7 +344,7 @@ export async function saveProfile(profile: UserProfile) {
 }
 
 export async function clearProfile() {
-  await AsyncStorage.multiRemove([profileStorageKey, legacyProfileStorageKey, checkInsStorageKey, measurementsStorageKey, progressPhotosStorageKey, mealSwapsStorageKey, workoutSessionsStorageKey, waterLogsStorageKey, groceryChecklistStorageKey]);
+  await AsyncStorage.multiRemove([profileStorageKey, legacyProfileStorageKey, checkInsStorageKey, measurementsStorageKey, progressPhotosStorageKey, mealSwapsStorageKey, workoutSessionsStorageKey, waterLogsStorageKey, groceryChecklistStorageKey, exerciseLogsStorageKey]);
 }
 
 export async function loadCheckIns(): Promise<DailyCheckIn[]> {
@@ -393,6 +427,16 @@ export async function loadGroceryChecklist(): Promise<GroceryChecklistItem[]> {
 
 export async function saveGroceryChecklist(items: GroceryChecklistItem[]) {
   await AsyncStorage.setItem(groceryChecklistStorageKey, JSON.stringify(items.slice(0, 120)));
+}
+
+export async function loadExerciseLogs(): Promise<LocalExerciseLog[]> {
+  const saved = await AsyncStorage.getItem(exerciseLogsStorageKey);
+  if (!saved) return [];
+  try { return JSON.parse(saved) as LocalExerciseLog[]; } catch { return []; }
+}
+
+export async function saveExerciseLogs(logs: LocalExerciseLog[]) {
+  await AsyncStorage.setItem(exerciseLogsStorageKey, JSON.stringify(logs.slice(0, 500)));
 }
 
 export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
@@ -487,6 +531,11 @@ export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
   }));
 
   const longerShopping = profile.shoppingFrequency === "biweekly" || profile.shoppingFrequency === "monthly";
+  const categorizedGroceries = categorizeGroceryItems(Array.from(new Set([
+    ...dailyMeals.flatMap((day) => day.slots.flatMap((slot) => slot.meal.ingredients)),
+    ...localIngredients.slice(0, 6),
+    profile.favoriteFruits[0] ? profile.favoriteFruits[0] : "A fruit you enjoy",
+  ])).slice(0, 60));
   return {
     rotationLabel: `Week ${profile.rotationWeek} of your two-week rotation`,
     goalTitle: goal.title,
@@ -497,11 +546,7 @@ export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
     breakfastMeals,
     dailyMeals,
     workouts: workoutPlan,
-    shoppingGroups: [
-      { title: "Ingredients from your planned recipes", items: Array.from(new Set(dailyMeals.flatMap((day) => day.slots.flatMap((slot) => slot.meal.ingredients)))).slice(0, 52) },
-      { title: "Helpful fresh extras", items: [...localIngredients.slice(0, 6), profile.favoriteFruits[0] ? profile.favoriteFruits[0] : "A fruit you enjoy"] },
-      { title: "Storage reminder", items: [longerShopping ? "Choose only quantities you can safely store until your next shop." : "Choose quantities you can use while fresh."] },
-    ],
+    shoppingGroups: [...categorizedGroceries, { title: "Storage reminder", items: [longerShopping ? "Choose only quantities you can safely store until your next shop." : "Choose quantities you can use while fresh."] }],
   };
 }
 

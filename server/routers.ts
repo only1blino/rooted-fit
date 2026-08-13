@@ -1,7 +1,9 @@
 import { COOKIE_NAME } from "../shared/const.js";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router } from "./_core/trpc";
+import { z } from "zod";
+import * as db from "./db";
+import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 
 export const appRouter = router({
   // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -15,6 +17,17 @@ export const appRouter = router({
         success: true,
       } as const;
     }),
+  }),
+
+  exerciseLogs: router({
+    list: protectedProcedure.query(({ ctx }) => db.listExerciseLogsForUser(ctx.user.id)),
+    create: protectedProcedure.input(z.object({
+      workoutId: z.string().min(1).max(512),
+      exerciseName: z.string().min(1).max(255),
+      setNumber: z.number().int().positive(),
+      repCount: z.number().int().positive(),
+      weightUsedKg: z.number().min(0).max(1000).nullable().optional(),
+    })).mutation(({ ctx, input }) => db.createExerciseLogForUser({ ...input, userId: ctx.user.id })),
   }),
 
   // TODO: add feature routers here, e.g.

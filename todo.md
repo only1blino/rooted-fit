@@ -72,3 +72,11 @@
 - [x] Add an interactive locally persisted grocery checklist with completion states and clear-all control
 - [x] Add a print-ready grocery checklist output for native devices and web
 - [x] Add and run deterministic tests for recipe exclusions and grocery checklist persistence and print text
+- [x] Add a replace-with-similar-recipe action that respects exclusions, meal slot, serving size, and rotation
+- [x] Categorize grocery checklist items into standard supermarket sections without altering source recipe ingredients
+- [x] Add a downloadable and shareable PDF grocery checklist alongside the existing print and text-export flows
+- [x] Stabilize the TypeScript toolchain at the existing compatible 5.9.3 release after validating the requested 5.3 pin against tRPC requirements
+- [ ] Re-initialize the Expo application identity only after validating the existing EAS project configuration
+- [x] Add separate Drizzle schemas for user authentication/profile credentials and home-workout exercise logs
+- [x] Add a safe local workout-log interface for exercise name, set number, repetitions, and weight used
+- [ ] Generate and inspect migrations, validate compilation and behaviours, then commit and push the expansion to the configured GitHub remote

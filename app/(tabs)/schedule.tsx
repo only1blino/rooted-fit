@@ -5,7 +5,7 @@ import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 
 import { ScreenContainer } from "@/components/screen-container";
-import { buildWeeklyPlan, formatGroceryChecklistPrintHtml, formatGroceryListExport, loadGroceryChecklist, loadMealSwaps, loadProfile, saveGroceryChecklist, saveMealSwaps, saveProfile, type GroceryChecklistItem, type MealFrequency, type MealSwap, type ServingSize, type UserProfile } from "@/lib/rootedfit-profile";
+import { buildWeeklyPlan, findSimilarRecipe, formatGroceryChecklistPrintHtml, formatGroceryListExport, loadGroceryChecklist, loadMealSwaps, loadProfile, saveGroceryChecklist, saveMealSwaps, saveProfile, type GroceryChecklistItem, type MealFrequency, type MealSwap, type ServingSize, type UserProfile } from "@/lib/rootedfit-profile";
 
 const FREQUENCIES: { value: MealFrequency; label: string; description: string }[] = [
   { value: "one_plus_snack", label: "One main meal + snack ideas", description: "One full recipe and two snack ideas each day." },
@@ -91,12 +91,52 @@ export default function MealsScreen() {
     await updateProfile({ excludedRecipeTitles: profile.excludedRecipeTitles.filter((title) => title !== sourceTitle) });
   };
 
+  const replaceAndExcludeRecipe = async (slotKey: string, sourceTitle: string, breakfast: boolean) => {
+    if (!profile || !plan) return;
+    const replacement = findSimilarRecipe(plan, sourceTitle, breakfast);
+    if (!replacement) {
+      Alert.alert("No similar recipe is available", "Keep this recipe for now or restore another recipe in the rotation first.");
+      return;
+    }
+    const nextProfile = { ...profile, excludedRecipeTitles: [...profile.excludedRecipeTitles, sourceTitle] };
+    const nextPlan = buildWeeklyPlan(nextProfile);
+    const replacementPool = breakfast ? nextPlan.breakfastMeals : nextPlan.meals;
+    const replacementIndex = replacementPool.findIndex((meal) => meal.sourceTitle === replacement.sourceTitle);
+    if (replacementIndex < 0) {
+      Alert.alert("Replacement could not be set", "Try swapping this meal first, then remove it from the rotation.");
+      return;
+    }
+    const nextSwaps = [...swaps.filter((swap) => swap.slotKey !== slotKey), { slotKey, recipeIndex: replacementIndex }];
+    setProfile(nextProfile);
+    setSwaps(nextSwaps);
+    await saveProfile(nextProfile);
+    await saveMealSwaps(nextSwaps);
+    Alert.alert("Recipe replaced", `${replacement.title} is now scheduled here. The previous recipe will not appear in future rotations unless you restore it.`);
+  };
+
   const printChecklist = async () => {
     try {
       if (Platform.OS === "web") await Print.printAsync({});
       else await Print.printAsync({ html: formatGroceryChecklistPrintHtml(plan!, profile?.city, checklistItems.filter((item) => checklist.find((entry) => entry.key === checklistKey(item))?.checked)) });
     } catch {
       Alert.alert("Print could not open", "Try exporting the grocery list as text instead.");
+    }
+  };
+
+  const downloadPdfChecklist = async () => {
+    try {
+      if (Platform.OS === "web") {
+        await Print.printAsync({});
+        return;
+      }
+      const { uri } = await Print.printToFileAsync({ html: formatGroceryChecklistPrintHtml(plan!, profile?.city, checklistItems.filter((item) => checklist.find((entry) => entry.key === checklistKey(item))?.checked)) });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, { dialogTitle: "Save or share RootedFit grocery checklist PDF", mimeType: "application/pdf", UTI: "com.adobe.pdf" });
+      } else {
+        Alert.alert("PDF ready", "Your device created the checklist PDF. Use the print option if a share sheet is not available.");
+      }
+    } catch {
+      Alert.alert("PDF could not be created", "Try printing the checklist or exporting the grocery list as text instead.");
     }
   };
 
@@ -138,11 +178,11 @@ export default function MealsScreen() {
 
     <Text style={styles.sectionTitle}>Recipes for your selected day</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>{plan.dailyMeals.map((item, index) => <Pressable key={item.label} onPress={() => setDayIndex(index)} style={[styles.chip, dayIndex === index && styles.chipActive]}><Text style={[styles.chipText, dayIndex === index && styles.chipTextActive]}>{item.label}</Text></Pressable>)}</ScrollView>
 
-    <View style={styles.card}><Text style={styles.kicker}>{day.label.toUpperCase()} · {plan.rotationLabel.toUpperCase()}</Text>{day.slots.map((slot) => { const key = `${profile.rotationWeek}-${day.day}-${slot.label}`; const isBreakfast = slot.label === "Breakfast"; const recipe = recipeFor(key, slot.meal, isBreakfast); return <View key={slot.label} style={styles.slot}><Text style={styles.slotLabel}>{slot.label}{isBreakfast ? " · LIGHT & PROTEIN-FORWARD" : ""}</Text><Text style={styles.recipeTitle}>{recipe.title}</Text><Text style={styles.focus}>{recipe.focus}</Text><Text style={styles.ingredients}>Ingredients: {recipe.ingredients.join(" · ")}</Text><View style={styles.exportRow}><Pressable onPress={() => swapRecipe(key, recipe.title, isBreakfast)} style={styles.swap}><Text style={styles.swapText}>Swap this {isBreakfast ? "breakfast" : "meal"} →</Text></Pressable><Pressable onPress={() => excludeRecipe(recipe.sourceTitle ?? recipe.title, isBreakfast)} style={styles.swap}><Text style={styles.swapText}>Remove from rotation</Text></Pressable></View><Text style={styles.methodTitle}>How to make it</Text>{recipe.steps.map((step, index) => <Text key={step} style={styles.method}>{index + 1}. {step}</Text>)}<Text style={styles.note}>{recipe.equipmentNote}</Text><Text style={styles.drink}>Drink idea: {recipe.drink}</Text></View>; })}{day.snackIdeas.length ? <View style={styles.snacks}><Text style={styles.slotLabel}>Optional snack ideas</Text>{day.snackIdeas.map((idea) => <Text key={idea} style={styles.method}>• {idea}</Text>)}</View> : null}</View>
+    <View style={styles.card}><Text style={styles.kicker}>{day.label.toUpperCase()} · {plan.rotationLabel.toUpperCase()}</Text>{day.slots.map((slot) => { const key = `${profile.rotationWeek}-${day.day}-${slot.label}`; const isBreakfast = slot.label === "Breakfast"; const recipe = recipeFor(key, slot.meal, isBreakfast); return <View key={slot.label} style={styles.slot}><Text style={styles.slotLabel}>{slot.label}{isBreakfast ? " · LIGHT & PROTEIN-FORWARD" : ""}</Text><Text style={styles.recipeTitle}>{recipe.title}</Text><Text style={styles.focus}>{recipe.focus}</Text><Text style={styles.ingredients}>Ingredients: {recipe.ingredients.join(" · ")}</Text><View style={styles.exportRow}><Pressable onPress={() => swapRecipe(key, recipe.title, isBreakfast)} style={styles.swap}><Text style={styles.swapText}>Swap this {isBreakfast ? "breakfast" : "meal"} →</Text></Pressable><Pressable onPress={() => replaceAndExcludeRecipe(key, recipe.sourceTitle ?? recipe.title, isBreakfast)} style={styles.swap}><Text style={styles.swapText}>Replace with similar</Text></Pressable></View><Pressable onPress={() => excludeRecipe(recipe.sourceTitle ?? recipe.title, isBreakfast)} style={styles.swap}><Text style={styles.swapText}>Remove from future rotations</Text></Pressable><Text style={styles.methodTitle}>How to make it</Text>{recipe.steps.map((step, index) => <Text key={step} style={styles.method}>{index + 1}. {step}</Text>)}<Text style={styles.note}>{recipe.equipmentNote}</Text><Text style={styles.drink}>Drink idea: {recipe.drink}</Text></View>; })}{day.snackIdeas.length ? <View style={styles.snacks}><Text style={styles.slotLabel}>Optional snack ideas</Text>{day.snackIdeas.map((idea) => <Text key={idea} style={styles.method}>• {idea}</Text>)}</View> : null}</View>
 
     {profile.excludedRecipeTitles.length ? <View style={styles.card}><Text style={styles.kicker}>REMOVED FROM FUTURE ROTATIONS</Text><Text style={styles.groceryIntro}>Restore any recipe when you want it available again.</Text>{profile.excludedRecipeTitles.map((title) => <View key={title} style={styles.exportRow}><Text style={styles.method}>{title}</Text><Pressable onPress={() => restoreRecipe(title)} style={styles.swap}><Text style={styles.swapText}>Restore</Text></Pressable></View>)}</View> : null}
 
-    <View style={styles.card}><Text style={styles.kicker}>INTERACTIVE GROCERY CHECKLIST</Text><Text style={styles.groceryIntro}>{checkedCount} of {checklistItems.length} items marked. Your ticks stay on this device for this rotation and serving preference.</Text>{plan.shoppingGroups.map((group) => <View key={group.title} style={styles.groceryGroup}><Text style={styles.groceryTitle}>{group.title}</Text>{group.items.map((item) => { const interactive = group.title !== "Storage reminder"; const checked = checklist.find((entry) => entry.key === checklistKey(item))?.checked ?? false; return interactive ? <Pressable key={item} onPress={() => toggleGroceryItem(item)} style={[styles.swap, checked && styles.choiceActive]}><Text style={styles.swapText}>{checked ? "✓" : "□"} {item}</Text></Pressable> : <Text key={item} style={styles.method}>• {item}</Text>; })}</View>)}<Pressable onPress={clearChecklist} style={styles.exportSecondary}><Text style={styles.exportSecondaryText}>Clear this checklist</Text></Pressable><View style={styles.exportRow}><Pressable onPress={printChecklist} style={styles.exportPrimary}><Text style={styles.exportPrimaryText}>Print checklist</Text></Pressable><Pressable onPress={exportGroceryList} style={styles.exportSecondary}><Text style={styles.exportSecondaryText}>Export list</Text></Pressable></View><Pressable onPress={shareGroceryList} style={styles.exportSecondary}><Text style={styles.exportSecondaryText}>Share grocery text</Text></Pressable><Text style={styles.exportNote}>Print opens the native print flow on phones and the browser print dialog on web. Export makes a plain-text grocery file on iOS and Android.</Text></View>
+    <View style={styles.card}><Text style={styles.kicker}>INTERACTIVE GROCERY CHECKLIST</Text><Text style={styles.groceryIntro}>{checkedCount} of {checklistItems.length} items marked. Your ticks stay on this device for this rotation and serving preference.</Text>{plan.shoppingGroups.map((group) => <View key={group.title} style={styles.groceryGroup}><Text style={styles.groceryTitle}>{group.title}</Text>{group.items.map((item) => { const interactive = group.title !== "Storage reminder"; const checked = checklist.find((entry) => entry.key === checklistKey(item))?.checked ?? false; return interactive ? <Pressable key={item} onPress={() => toggleGroceryItem(item)} style={[styles.swap, checked && styles.choiceActive]}><Text style={styles.swapText}>{checked ? "✓" : "□"} {item}</Text></Pressable> : <Text key={item} style={styles.method}>• {item}</Text>; })}</View>)}<Pressable onPress={clearChecklist} style={styles.exportSecondary}><Text style={styles.exportSecondaryText}>Clear this checklist</Text></Pressable><View style={styles.exportRow}><Pressable onPress={printChecklist} style={styles.exportPrimary}><Text style={styles.exportPrimaryText}>Print checklist</Text></Pressable><Pressable onPress={downloadPdfChecklist} style={styles.exportSecondary}><Text style={styles.exportSecondaryText}>Create PDF</Text></Pressable></View><View style={styles.exportRow}><Pressable onPress={exportGroceryList} style={styles.exportSecondary}><Text style={styles.exportSecondaryText}>Export list</Text></Pressable><Pressable onPress={shareGroceryList} style={styles.exportSecondary}><Text style={styles.exportSecondaryText}>Share grocery text</Text></Pressable></View><Text style={styles.exportNote}>Create PDF generates a shareable file on phones. On web, it opens the browser print dialog so you can save as PDF. Grocery categories come directly from the planned recipe ingredients.</Text></View>
   </ScrollView></ScreenContainer>;
 }
 
