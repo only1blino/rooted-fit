@@ -90,7 +90,7 @@
 - [x] Add a locally remembered welcome guide for first-time web visitors
 - [x] Add a web sharing action that copies the current app link with a browser-safe fallback
 - [x] Validate and checkpoint the browser-tester experience enhancements
-- [ ] Add a direct tester-feedback form with safe server-side persistence and a clear submission confirmation
-- [ ] Add a concise “What’s New” section to Extras for recent release notes and bug fixes
-- [ ] Add optional local ratings immediately after workout or meal-plan completion
-- [ ] Validate the production web bundle and push the tester-feedback release to GitHub
+- [x] Add a direct tester-feedback form with safe server-side persistence and a clear submission confirmation
+- [x] Add a concise “What’s New” section to Extras for recent release notes and bug fixes
+- [x] Add optional local ratings immediately after workout or meal-plan completion
+- [x] Validate the production web bundle and push the tester-feedback release to GitHub
