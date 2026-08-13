@@ -39,6 +39,7 @@ const microwaveProfile: UserProfile = {
   dailyStepCount: 3500,
   aspirationalStepTarget: 5000,
   workoutMinutesPerDay: 20,
+  workoutDifficulty: "beginner",
   workoutResources: ["Yoga mat", "Safe floor space"],
   otherWorkoutResources: [],
   goal: "core_mobility",
@@ -149,6 +150,19 @@ describe("RootedFit weekly plan builder", () => {
     expect(plan.workouts).toHaveLength(7);
     expect(new Set(plan.workouts.map((workout) => workout.title)).size).toBe(7);
     expect(plan.workouts.map((workout) => workout.label)).toEqual(["Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Day 7"]);
+  });
+
+  it("persists a workout difficulty and adapts every daily session without changing the weekly variety", () => {
+    const beginner = buildWeeklyPlan({ ...microwaveProfile, workoutDifficulty: "beginner" });
+    const intermediate = buildWeeklyPlan({ ...microwaveProfile, workoutDifficulty: "intermediate" });
+    const advanced = buildWeeklyPlan({ ...microwaveProfile, workoutDifficulty: "advanced" });
+
+    expect(beginner.workouts.every((workout) => workout.difficulty === "beginner")).toBe(true);
+    expect(intermediate.workouts.every((workout) => workout.difficulty === "intermediate")).toBe(true);
+    expect(advanced.workouts[0].durationMinutes).toBeGreaterThan(beginner.workouts[0].durationMinutes);
+    expect(beginner.workouts[0].instructions.at(-1)).toContain("Beginner option");
+    expect(advanced.workouts[0].instructions.at(-1)).toContain("Advanced option");
+    expect(new Set(advanced.workouts.map((workout) => workout.title)).size).toBe(7);
   });
 
   it("formats a shareable grocery list from the selected plan rather than generic shopping placeholders", () => {

@@ -4,6 +4,7 @@ import type { FoodCountry } from "@/lib/food-catalogue";
 export type ShoppingFrequency = "daily" | "weekly" | "biweekly" | "monthly";
 export type MealFrequency = "one_plus_snack" | "two" | "three";
 export type ServingSize = "lighter" | "regular" | "generous";
+export type WorkoutDifficulty = "beginner" | "intermediate" | "advanced";
 export type SweetToothPreference = "none" | "healthier_swaps" | "portion_guidance";
 export type WellnessGoal = "consistency" | "energy" | "toning" | "core_mobility" | "body_composition" | "weight_loss" | "weight_gain" | null;
 export type MeasurementUnit = "ft_in_kg" | "cm_lb";
@@ -31,6 +32,7 @@ export type UserProfile = {
   dailyStepCount: number;
   aspirationalStepTarget: number;
   workoutMinutesPerDay: number;
+  workoutDifficulty: WorkoutDifficulty;
   workoutResources: string[];
   otherWorkoutResources: string[];
   goal: WellnessGoal;
@@ -68,6 +70,7 @@ export type WorkoutDay = {
   videoTitle: string;
   videoUrl: string;
   videoProvider: string;
+  difficulty: WorkoutDifficulty;
 };
 
 export type ShoppingGroup = {
@@ -159,6 +162,7 @@ export const emptyProfile: UserProfile = {
   dailyStepCount: 0,
   aspirationalStepTarget: 0,
   workoutMinutesPerDay: 0,
+  workoutDifficulty: "beginner",
   workoutResources: [],
   otherWorkoutResources: [],
   goal: null,
@@ -189,6 +193,7 @@ function normaliseProfile(profile: Partial<UserProfile>): UserProfile {
     otherWorkoutResources: profile.otherWorkoutResources ?? [],
     secondaryFocuses: profile.secondaryFocuses ?? [],
     servingSize: profile.servingSize === "lighter" || profile.servingSize === "generous" ? profile.servingSize : "regular",
+    workoutDifficulty: profile.workoutDifficulty === "intermediate" || profile.workoutDifficulty === "advanced" ? profile.workoutDifficulty : "beginner",
     rotationWeek: profile.rotationWeek === 2 ? 2 : 1,
     measurementUnit: legacyMeasurementUnit === "imperial" ? "ft_in_kg" : legacyMeasurementUnit === "metric" ? "cm_lb" : legacyMeasurementUnit === "cm_lb" ? "cm_lb" : "ft_in_kg",
   };
@@ -313,6 +318,16 @@ function movementAdaptation(profile: UserProfile) {
   if (profile.workoutResources.includes("Resistance band")) parts.push("Add a band only where it feels controlled.");
   if (profile.workoutResources.includes("Weights or filled bottles")) parts.push("Filled bottles can add a light load.");
   return parts.length ? parts.join(" ") : "Bodyweight and a small clear space are enough for this session.";
+}
+
+function difficultyAdaptation(difficulty: WorkoutDifficulty) {
+  if (difficulty === "advanced") {
+    return { label: "Advanced", instruction: "Advanced option: only when movement remains controlled, add one extra round or two careful repetitions per exercise; stop before form breaks down.", durationAdjustment: 5 };
+  }
+  if (difficulty === "intermediate") {
+    return { label: "Intermediate", instruction: "Intermediate option: use the listed rounds and repetitions at a smooth, controlled pace, resting whenever form needs it.", durationAdjustment: 0 };
+  }
+  return { label: "Beginner", instruction: "Beginner option: start with one controlled round, use a smaller range or more support when useful, and build only when it feels steady.", durationAdjustment: -5 };
 }
 
 export function splitList(value: string): string[] {
@@ -531,7 +546,7 @@ export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
   }));
 
   const rounds = durationMinutes >= 30 ? 3 : 2;
-  const workoutTemplates: Omit<WorkoutDay, "day" | "label" | "durationMinutes" | "adaptation">[] = [
+  const workoutTemplates: Omit<WorkoutDay, "day" | "label" | "durationMinutes" | "adaptation" | "difficulty">[] = [
     { title: "Home toning: full-body foundation", category: "Strength & toning", instructions: ["Warm up for 3 minutes: march in place, shoulder rolls, and hip circles.", `Complete ${rounds} rounds: 10 chair sit-to-stands, 8 wall push-ups, 10 hip hinges, and 12 calf raises.`, "Rest for 45–60 seconds between rounds and finish with 2 minutes of relaxed stretching."], videoTitle: "30 MIN FULL BODY WORKOUT · At-Home Pilates", videoUrl: "https://www.youtube.com/watch?v=lBCBSy9cNT0", videoProvider: "Move With Nicole" },
     { title: "Pilates-inspired core: control block", category: "Core & control", instructions: ["Spend 3 minutes on slow breathing, pelvic tilts, and gentle spinal mobility.", `Complete ${rounds} rounds: 8 heel taps per side, 8 dead-bug reaches per side, and a 20-second supported tabletop hold.`, "Finish with 6 slow cat-cow movements or seated spinal rolls and a side-body stretch."], videoTitle: "30 MIN PILATES CORE WORKOUT · At-Home Pilates Abs", videoUrl: "https://www.youtube.com/watch?v=U5LwQW_IQOc", videoProvider: "Move With Nicole" },
     { title: "Walking rhythm: step builder", category: "Steps & stamina", instructions: ["Start with 3 minutes at an easy walking or marching pace.", `Alternate 2 minutes steady walking with 1 minute brisk walking or higher-knee marching for ${Math.max(4, Math.floor(durationMinutes / 3))} cycles.`, "Cool down for 3 minutes and stretch calves and ankles gently."], videoTitle: "30-Minute Yoga For Beginners", videoUrl: "https://www.youtube.com/watch?v=AB3Y-4a3ZrU", videoProvider: "Yoga With Adriene" },
@@ -540,12 +555,15 @@ export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
     { title: "Small-space cardio: no-equipment mix", category: "Movement variety", instructions: ["Use 3 minutes of easy marching and step touches to warm up.", `Complete ${rounds} rounds: 45 seconds marching, 45 seconds step touches, 45 seconds shadow boxing, then 45 seconds easy recovery.`, "Finish with 2 minutes of slow breathing and shoulder/leg stretches."], videoTitle: "30 MIN ABS & BOOTY · No Equipment", videoUrl: "https://www.youtube.com/watch?v=pKhKqYBP7qQ", videoProvider: "YouTube" },
     { title: "Recovery flow: restore and reset", category: "Recovery & mobility", instructions: ["Choose a calm space and take 6 slow breaths.", "Move gently through 8 cat-cow or seated spinal rolls, 8 hip circles per side, and 30 seconds of a comfortable child’s pose or chair fold.", "Finish with one sentence about what made movement possible today; no performance target is needed."], videoTitle: "30-Minute Yoga For Beginners", videoUrl: "https://www.youtube.com/watch?v=AB3Y-4a3ZrU", videoProvider: "Yoga With Adriene" },
   ];
+  const difficulty = difficultyAdaptation(profile.workoutDifficulty);
   const workoutPlan = labels.map((label, index) => ({
     ...workoutTemplates[index],
     day: index + 1,
     label,
-    durationMinutes,
-    adaptation: `${movementAdaptation(profile)} Keep the session pain-free; pause or choose a gentler option if anything feels wrong.`,
+    durationMinutes: Math.max(10, durationMinutes + difficulty.durationAdjustment),
+    instructions: [...workoutTemplates[index].instructions, difficulty.instruction],
+    adaptation: `${difficulty.label} level. ${movementAdaptation(profile)} Keep the session pain-free; pause or choose a gentler option if anything feels wrong.`,
+    difficulty: profile.workoutDifficulty,
   }));
 
   const longerShopping = profile.shoppingFrequency === "biweekly" || profile.shoppingFrequency === "monthly";

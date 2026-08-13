@@ -102,4 +102,10 @@
 - [x] Fix serving-preference persistence and apply the selected scale to recipe ingredients and grocery quantities
 - [x] Replace repeated workout output with a varied seven-day, goal-aware workout schedule
 - [x] Add deterministic regression coverage for feedback placement data, serving scaling, and daily workout uniqueness
-- [ ] Validate, publish, and push the corrected web and Expo release to GitHub
+- [x] Validate, publish, and push the corrected web and Expo release to GitHub
+- [x] Add a selected-day navigator for the seven daily workout sessions
+- [x] Add a locally persisted beginner, intermediate, and advanced workout difficulty preference
+- [x] Adapt daily workout instructions and exercise volume to the selected difficulty without medical claims
+- [x] Add a brief cross-platform ingredient highlight when a serving preference is changed
+- [x] Add regression coverage for difficulty persistence and day-specific workout plans
+- [ ] Validate, publish, and push the updated web and Expo release to GitHub
