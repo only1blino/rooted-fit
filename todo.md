@@ -48,3 +48,9 @@
 - [x] Build a separate goal-specific home-workout library informed by researched external workout resources
 - [x] Rename Move to Extras while retaining timer and desk-break tools
 - [x] Add tests and document the food taxonomy, recipe navigation, and goal-specific workout content policy
+- [x] Define local data models and product rules for meal swaps, saved workouts, completed workouts, and regional recipe packs
+- [x] Add per-slot meal-swap controls with locally persisted replacements
+- [x] Add saved and completed states for individual workout sessions
+- [x] Add a Ghana-specific recipe pack with coherent ingredient quantities and preparation steps
+- [x] Add a Kenya-specific recipe pack with coherent ingredient quantities and preparation steps
+- [x] Add tests and documentation for swaps, workout tracking, and localized recipe packs

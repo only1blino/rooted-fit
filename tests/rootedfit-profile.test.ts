@@ -14,7 +14,7 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
-import { buildWeeklyPlan, loadCheckIns, loadMeasurements, loadProfile, loadProgressPhotos, numberOrNull, saveCheckIns, saveMeasurements, saveProfile, saveProgressPhotos, splitList, type UserProfile } from "../lib/rootedfit-profile";
+import { buildWeeklyPlan, loadCheckIns, loadMealSwaps, loadMeasurements, loadProfile, loadProgressPhotos, loadWorkoutSessionStates, numberOrNull, saveCheckIns, saveMealSwaps, saveMeasurements, saveProfile, saveProgressPhotos, saveWorkoutSessionStates, splitList, type UserProfile } from "../lib/rootedfit-profile";
 import { suggestedFoods, suggestedFruits, suggestedMeals } from "../lib/food-catalogue";
 
 const microwaveProfile: UserProfile = {
@@ -89,6 +89,11 @@ describe("RootedFit weekly plan builder", () => {
     expect(plan.meals[0].ingredients[0]).toMatch(/^¾ cup parboiled rice/);
   });
 
+  it("uses localized recipe packs for Ghana and Kenya", () => {
+    expect(buildWeeklyPlan({ ...microwaveProfile, country: "Ghana" }).meals[0].title).toContain("Waakye");
+    expect(buildWeeklyPlan({ ...microwaveProfile, country: "Kenya" }).meals[0].title).toContain("Githeri");
+  });
+
   it("persists the expanded onboarding profile locally", async () => {
     await saveProfile(microwaveProfile);
 
@@ -112,5 +117,16 @@ describe("RootedFit weekly plan builder", () => {
     await saveProgressPhotos(photos);
 
     await expect(loadProgressPhotos()).resolves.toEqual(photos);
+  });
+
+  it("persists meal swaps and saved or completed workout-session states", async () => {
+    const swaps = [{ slotKey: "1-Breakfast", recipeIndex: 3 }];
+    const sessions = [{ workoutId: "core-video", saved: true, completedAt: "2026-08-13" }];
+
+    await saveMealSwaps(swaps);
+    await saveWorkoutSessionStates(sessions);
+
+    await expect(loadMealSwaps()).resolves.toEqual(swaps);
+    await expect(loadWorkoutSessionStates()).resolves.toEqual(sessions);
   });
 });

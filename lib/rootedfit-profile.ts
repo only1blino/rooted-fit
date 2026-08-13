@@ -110,11 +110,16 @@ export type ProgressPhoto = {
   uri: string;
 };
 
+export type MealSwap = { slotKey: string; recipeIndex: number };
+export type WorkoutSessionState = { workoutId: string; saved: boolean; completedAt: string | null };
+
 export const profileStorageKey = "rootedfit.profile.v2";
 const legacyProfileStorageKey = "rootedfit.profile.v1";
 export const checkInsStorageKey = "rootedfit.check-ins.v1";
 export const measurementsStorageKey = "rootedfit.measurements.v1";
 export const progressPhotosStorageKey = "rootedfit.progress-photos.v1";
+export const mealSwapsStorageKey = "rootedfit.meal-swaps.v1";
+export const workoutSessionsStorageKey = "rootedfit.workout-sessions.v1";
 
 export const emptyProfile: UserProfile = {
   city: "",
@@ -257,7 +262,7 @@ export async function saveProfile(profile: UserProfile) {
 }
 
 export async function clearProfile() {
-  await AsyncStorage.multiRemove([profileStorageKey, legacyProfileStorageKey, checkInsStorageKey, measurementsStorageKey, progressPhotosStorageKey]);
+  await AsyncStorage.multiRemove([profileStorageKey, legacyProfileStorageKey, checkInsStorageKey, measurementsStorageKey, progressPhotosStorageKey, mealSwapsStorageKey, workoutSessionsStorageKey]);
 }
 
 export async function loadCheckIns(): Promise<DailyCheckIn[]> {
@@ -302,6 +307,26 @@ export async function saveProgressPhotos(photos: ProgressPhoto[]) {
   await AsyncStorage.setItem(progressPhotosStorageKey, JSON.stringify(photos.slice(0, 60)));
 }
 
+export async function loadMealSwaps(): Promise<MealSwap[]> {
+  const saved = await AsyncStorage.getItem(mealSwapsStorageKey);
+  if (!saved) return [];
+  try { return JSON.parse(saved) as MealSwap[]; } catch { return []; }
+}
+
+export async function saveMealSwaps(swaps: MealSwap[]) {
+  await AsyncStorage.setItem(mealSwapsStorageKey, JSON.stringify(swaps.slice(0, 100)));
+}
+
+export async function loadWorkoutSessionStates(): Promise<WorkoutSessionState[]> {
+  const saved = await AsyncStorage.getItem(workoutSessionsStorageKey);
+  if (!saved) return [];
+  try { return JSON.parse(saved) as WorkoutSessionState[]; } catch { return []; }
+}
+
+export async function saveWorkoutSessionStates(states: WorkoutSessionState[]) {
+  await AsyncStorage.setItem(workoutSessionsStorageKey, JSON.stringify(states.slice(0, 100)));
+}
+
 export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
   const localIngredients = profile.localIngredients.length ? profile.localIngredients : ["tomato", "onion", "leafy greens"];
   const storageNote = foodStorageNote(profile);
@@ -325,10 +350,21 @@ export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
     { title: "Catfish pepper soup with boiled sweet potato", focus: "A simple fresh-market meal with a clear cooking sequence", ingredients: ["1 catfish portion", "1 small sweet potato", "½ onion", "1 teaspoon pepper-soup spice", "Fresh pepper to taste", "Handful scent leaf or parsley (optional)"], steps: ["Peel and cube the sweet potato; boil in a separate pot until tender.", "Place fish, onion, pepper-soup spice, and pepper in a pot with enough water to cover the fish.", "Simmer gently until the fish is cooked and the broth tastes seasoned.", "Add scent leaf or parsley at the end and serve with the boiled sweet potato."], drink: "Water; the pepper soup broth is part of the meal." },
     { title: "Ofada-style rice with tomato stew and vegetables", focus: `A practical version of ${comfortFood} using a separate stew base`, ingredients: ["¾ cup rice", "2 tomatoes", "½ red bell pepper", "½ onion", "1 teaspoon oil", "1 palm-sized chicken or fish portion", "1 cup cabbage, carrot, or green beans"], steps: ["Rinse the rice and cook until tender; drain any excess water.", "Blend tomato, pepper, and onion. Fry in oil until the sauce thickens and the colour deepens.", "Cook the chicken or fish separately, then spoon some of the stew over it.", "Quickly sauté or boil the vegetables and serve them beside the rice and stew."], drink: `Water with a serving of ${fruit} later in the day.` },
   ];
-  const restrictionSafeRecipes = nigeriaRecipes.filter((recipe) => !excluded.some((item) => `${recipe.title} ${recipe.ingredients.join(" ")}`.toLowerCase().includes(item)));
+  const ghanaRecipes: Omit<MealDay, "day" | "label" | "storageNote" | "equipmentNote">[] = [
+    { title: "Waakye with tomato-onion relish", focus: "A Ghanaian rice-and-bean meal with a clear pot sequence", ingredients: ["½ cup black-eyed peas or cow beans", "½ cup rice", "2 dried sorghum leaves if available", "½ onion", "1 tomato", "1 teaspoon oil", "Pinch of salt"], steps: ["Soak the beans if using dried beans, then rinse them well.", "Simmer the sorghum leaves in water for 15–20 minutes if you have them; remove the leaves before cooking the beans in the coloured water.", "Cook the beans until nearly tender, then add rinsed rice and cook until both are soft.", "Cook diced onion and tomato in a teaspoon of oil until softened; spoon beside the waakye."], drink: `Water and ${fruit} later in the day.` },
+    { title: "Red red-style beans with baked plantain", focus: "A beans-and-plantain comfort meal using straightforward ingredients", ingredients: ["¾ cup black-eyed peas", "½ ripe plantain", "½ onion", "1 tomato", "1 teaspoon palm oil or preferred oil", "Pinch of ginger or chili if enjoyed"], steps: ["Cook the beans in fresh water until tender.", "Cook onion and tomato in the oil until the mixture thickens, then stir in the cooked beans and season to taste.", "Slice the plantain and bake, air-fry, or pan-cook with a small amount of oil until tender.", "Serve the beans with plantain and a side of any greens you have."], drink: "Water or unsweetened hibiscus drink made with safe water." },
+    { title: "Kontomire-style greens with boiled yam", focus: "A flexible leafy-green meal that respects what is locally available", ingredients: ["2 cups kontomire, spinach, or other sturdy greens", "2 thick yam slices", "½ onion", "1 tomato", "1 teaspoon oil", "Small fish or egg only if it fits your preferences"], steps: ["Peel and boil the yam until fork-tender.", "Cook onion and tomato in the oil until soft.", "Add greens and a small splash of water; cook until the leaves soften while keeping their colour.", "Add an optional protein if it suits your preferences and serve beside the boiled yam."], drink: `Water with ${fruit}.` },
+  ];
+  const kenyaRecipes: Omit<MealDay, "day" | "label" | "storageNote" | "equipmentNote">[] = [
+    { title: "Githeri-style maize and beans", focus: "A Kenyan-inspired one-pot maize-and-bean base", ingredients: ["½ cup cooked maize or sweet corn", "½ cup cooked beans", "½ onion", "1 tomato", "1 teaspoon oil", "1 cup kale, spinach, or sukuma wiki"], steps: ["Cook or reheat beans and maize until hot and tender.", "Cook onion and tomato in the oil until soft.", "Stir in the beans and maize with a small splash of water; simmer until the flavours combine.", "Fold in the greens until softened and serve while warm."], drink: `Water and ${fruit} later in the day.` },
+    { title: "Sukuma wiki with ugali", focus: "Leafy greens and maize staple with flexible local substitutions", ingredients: ["2 cups sukuma wiki, kale, collards, or spinach", "½ onion", "1 tomato", "1 clove garlic", "1 teaspoon oil", "½ cup maize flour", "1¼ cups water"], steps: ["Bring the water to a boil and gradually stir in maize flour until it becomes a smooth, firm ugali; keep stirring until cooked through.", "Cook onion and garlic in oil, then add tomato and cook until soft.", "Add the greens with a small splash of water and cook until tender.", "Serve the sukuma wiki beside the ugali."], drink: "Water or unsweetened ginger tea." },
+    { title: "Chapati-style bean and vegetable stew", focus: "A practical bean stew paired with a familiar flatbread when available", ingredients: ["1 chapati or other flatbread", "½ cup cooked beans", "½ onion", "1 tomato", "½ carrot", "1 teaspoon oil", "Pinch of cumin or coriander if available"], steps: ["Cook onion, carrot, and tomato in the oil until softened.", "Add the beans, season with a pinch of cumin or coriander if you use it, and simmer with a little water for 5 minutes.", "Warm the chapati or use another familiar flatbread.", "Serve the bean stew with the flatbread and any cucumber or greens you have."], drink: `Water with ${fruit}.` },
+  ];
+  const regionalRecipes = profile.country === "Ghana" ? ghanaRecipes : profile.country === "Kenya" ? kenyaRecipes : nigeriaRecipes;
+  const restrictionSafeRecipes = regionalRecipes.filter((recipe) => !excluded.some((item) => `${recipe.title} ${recipe.ingredients.join(" ")}`.toLowerCase().includes(item)));
   const plantBasedRecipes = restrictionSafeRecipes.filter((recipe) => !/(chicken|fish|egg|catfish)/i.test(`${recipe.title} ${recipe.ingredients.join(" ")}`));
   const usableRecipes = usesAnimalFoods ? restrictionSafeRecipes : plantBasedRecipes.length ? plantBasedRecipes : restrictionSafeRecipes;
-  const mealPlan = labels.map((label, index) => ({ ...(usableRecipes.length ? usableRecipes[index % usableRecipes.length] : nigeriaRecipes[0]), day: index + 1, label, storageNote, equipmentNote: recipeEquipmentNote }));
+  const mealPlan = labels.map((label, index) => ({ ...(usableRecipes.length ? usableRecipes[index % usableRecipes.length] : regionalRecipes[0]), day: index + 1, label, storageNote, equipmentNote: recipeEquipmentNote }));
   const sweetToothSnack = profile.sweetToothPreference === "healthier_swaps" ? "Fruit with plain yoghurt or a small homemade cocoa-oat snack" : profile.sweetToothPreference === "portion_guidance" ? "A small chosen sweet portion served after a balanced meal, rather than eating from the packet" : "A small cup of pap, yoghurt, or another snack that fits your dietary notes";
   const snackIdeas = [`${fruit} with a small handful of groundnuts if suitable for you`, "Cucumber, carrot, or another crunchy vegetable with a familiar dip", sweetToothSnack];
   const slotLabels = profile.mealFrequency === "one_plus_snack" ? ["Main meal"] : profile.mealFrequency === "two" ? ["First meal", "Second meal"] : ["Breakfast", "Lunch", "Dinner"];
