@@ -95,3 +95,6 @@
 - [x] Add optional local ratings immediately after workout or meal-plan completion
 - [x] Validate the production web bundle and push the tester-feedback release to GitHub
 - [x] Verify the current production bundle, GitHub synchronization, and hosted tester URL after release
+- [x] Update the production build pipeline to include the Expo static web export for internal hosting
+- [ ] Validate, push, and republish the repaired RootedFit production release
+- [ ] Confirm the hosted tester URL returns the RootedFit web application
