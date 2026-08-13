@@ -38,7 +38,7 @@ const microwaveProfile: UserProfile = {
   goal: "core_mobility",
   secondaryFocuses: ["consistency"],
   genderIdentity: "Prefer not to say",
-  measurementUnit: "metric",
+  measurementUnit: "ft_in_kg",
   heightCm: null,
   weightKg: null,
   baselineWaistCm: null,
@@ -82,7 +82,7 @@ describe("RootedFit weekly plan builder", () => {
 
   it("persists daily check-ins and weekly measurements locally", async () => {
     const checkIns = [{ id: "today", date: "2026-08-13", steps: 4500, mood: "good" as const, followedMealIdea: true, completedMovement: false, note: "Walked after lunch" }];
-    const measurements = [{ id: "week-1", date: "2026-08-13", weightKg: 62.5, waistCm: 74, hipCm: null, chestCm: null, upperArmCm: null, thighCm: null, unit: "metric" as const, note: "Morning check-in" }];
+    const measurements = [{ id: "week-1", date: "2026-08-13", weightKg: 62.5, waistCm: 74, hipCm: null, chestCm: null, upperArmCm: null, thighCm: null, unit: "ft_in_kg" as const, note: "Morning check-in" }];
 
     await saveCheckIns(checkIns);
     await saveMeasurements(measurements);

@@ -25,3 +25,7 @@
 - [x] Add private local front, side, and back progress-photo records
 - [x] Replace generic weekly outputs with specific ingredient quantities, recipe steps, timed meal slots, and cohesive workout blocks
 - [x] Add tests and update research/design documentation for the enhanced recommendation model
+- [x] Review the supplied motivation and home-fitness references for reusable non-clinical layout and content patterns
+- [x] Correct tracker units to support feet/inches with kilograms and centimetres with pounds as requested
+- [x] Make daily motivations and affirmations prominent, varied, and actionable in the tracker
+- [x] Validate and document the final tracker polish update

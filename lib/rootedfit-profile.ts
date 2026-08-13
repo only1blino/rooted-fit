@@ -3,7 +3,7 @@ import type { FoodCountry } from "@/lib/food-catalogue";
 
 export type ShoppingFrequency = "daily" | "weekly" | "biweekly" | "monthly";
 export type WellnessGoal = "consistency" | "energy" | "toning" | "core_mobility" | "body_composition" | null;
-export type MeasurementUnit = "metric" | "imperial";
+export type MeasurementUnit = "ft_in_kg" | "cm_lb";
 export type ProgressPhotoAngle = "front" | "side" | "back";
 
 export type UserProfile = {
@@ -129,7 +129,7 @@ export const emptyProfile: UserProfile = {
   goal: null,
   secondaryFocuses: [],
   genderIdentity: "Prefer not to say",
-  measurementUnit: "metric",
+  measurementUnit: "ft_in_kg",
   heightCm: null,
   weightKg: null,
   baselineWaistCm: null,
@@ -138,6 +138,7 @@ export const emptyProfile: UserProfile = {
 };
 
 function normaliseProfile(profile: Partial<UserProfile>): UserProfile {
+  const legacyMeasurementUnit = (profile as { measurementUnit?: string }).measurementUnit;
   return {
     ...emptyProfile,
     ...profile,
@@ -151,6 +152,7 @@ function normaliseProfile(profile: Partial<UserProfile>): UserProfile {
     workoutResources: profile.workoutResources ?? [],
     otherWorkoutResources: profile.otherWorkoutResources ?? [],
     secondaryFocuses: profile.secondaryFocuses ?? [],
+    measurementUnit: legacyMeasurementUnit === "imperial" ? "ft_in_kg" : legacyMeasurementUnit === "metric" ? "cm_lb" : legacyMeasurementUnit === "cm_lb" ? "cm_lb" : "ft_in_kg",
   };
 }
 
