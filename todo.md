@@ -96,5 +96,10 @@
 - [x] Validate the production web bundle and push the tester-feedback release to GitHub
 - [x] Verify the current production bundle, GitHub synchronization, and hosted tester URL after release
 - [x] Update the production build pipeline to include the Expo static web export for internal hosting
-- [ ] Validate, push, and republish the repaired RootedFit production release
-- [ ] Confirm the hosted tester URL returns the RootedFit web application
+- [x] Validate, push, and republish the repaired RootedFit production release
+- [x] Confirm the hosted tester URL returns the RootedFit web application
+- [x] Reposition the global feedback control so it never covers the Workouts or Extras tab interfaces
+- [x] Fix serving-preference persistence and apply the selected scale to recipe ingredients and grocery quantities
+- [x] Replace repeated workout output with a varied seven-day, goal-aware workout schedule
+- [x] Add deterministic regression coverage for feedback placement data, serving scaling, and daily workout uniqueness
+- [ ] Validate, publish, and push the corrected web and Expo release to GitHub

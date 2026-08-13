@@ -88,7 +88,9 @@ export function TesterTools() {
 
 const styles = StyleSheet.create({
   overlay: { ...StyleSheet.absoluteFillObject, zIndex: 50 },
-  floatingStack: { alignItems: "flex-end", bottom: 24, gap: 9, position: "absolute", right: 20 },
+  // Keep both browser-only controls clear of the persistent tab bar and the
+  // bottom actions used on Workouts and Extras.
+  floatingStack: { alignItems: "flex-end", bottom: 96, gap: 9, position: "absolute", right: 20 },
   shareButton: { backgroundColor: "#FFFFFF", borderColor: "#BFD8C4", borderRadius: 999, borderWidth: 1, paddingHorizontal: 15, paddingVertical: 11, shadowColor: "#1F2A25", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.14, shadowRadius: 8 },
   shareButtonText: { color: "#1D583E", fontSize: 13, fontWeight: "800" },
   feedbackButton: { backgroundColor: "#2D6A4F", borderRadius: 999, paddingHorizontal: 17, paddingVertical: 13, shadowColor: "#1F2A25", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.18, shadowRadius: 10 },

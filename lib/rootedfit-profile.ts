@@ -239,19 +239,25 @@ function cookingMethod(profile: UserProfile) {
   return "assemble";
 }
 
-function remapCupPortions(item: string, mapping: Record<string, string>) {
-  return item.replace(/1¼ cups|1 cup|¾ cup|½ cup/g, (portion) => mapping[portion] ?? portion);
+function remapMeasuredPortions(item: string, mapping: Record<string, string>) {
+  return item.replace(/2 cups|1½ cups|1¼ cups|1 cup|¾ cup|½ cup|¼ cup|2 tablespoons|1 tablespoon|1 teaspoon|2 eggs|1 egg|2 thick slices|1 thick slice|1 chapati|1 small sweet potato|1 palm-sized (?:chicken|fish) portion/g, (portion) => mapping[portion] ?? portion);
 }
 
 function applyServingPreference(items: string[], servingSize: ServingSize) {
-  if (servingSize === "lighter") return items.map((item) => remapCupPortions(item, { "1¼ cups": "1 cup", "1 cup": "¾ cup", "¾ cup": "½ cup", "½ cup": "⅓ cup" }).replace(/2 thick slices/g, "1 thick slice").replace(/1 chapati/g, "½ chapati"));
-  if (servingSize === "generous") return items.map((item) => remapCupPortions(item, { "½ cup": "¾ cup", "¾ cup": "1 cup", "1 cup": "1¼ cups" }).replace(/2 thick slices/g, "3 thick slices").replace(/1 chapati/g, "1½ chapati"));
+  if (servingSize === "lighter") return items.map((item) => remapMeasuredPortions(item, {
+    "2 cups": "1½ cups", "1½ cups": "1¼ cups", "1¼ cups": "1 cup", "1 cup": "¾ cup", "¾ cup": "½ cup", "½ cup": "⅓ cup", "¼ cup": "2 tablespoons",
+    "2 tablespoons": "1 tablespoon", "1 tablespoon": "2 teaspoons", "1 teaspoon": "½ teaspoon", "2 eggs": "1 egg", "2 thick slices": "1 thick slice", "1 chapati": "½ chapati", "1 small sweet potato": "½ small sweet potato", "1 palm-sized chicken portion": "1 smaller chicken portion", "1 palm-sized fish portion": "1 smaller fish portion",
+  }));
+  if (servingSize === "generous") return items.map((item) => remapMeasuredPortions(item, {
+    "2 cups": "3 cups", "1½ cups": "2 cups", "1¼ cups": "1½ cups", "1 cup": "1¼ cups", "¾ cup": "1 cup", "½ cup": "¾ cup", "¼ cup": "½ cup",
+    "2 tablespoons": "3 tablespoons", "1 tablespoon": "1½ tablespoons", "1 teaspoon": "1½ teaspoons", "1 egg": "2 eggs", "2 thick slices": "3 thick slices", "1 thick slice": "2 thick slices", "1 chapati": "1½ chapati", "1 small sweet potato": "1½ small sweet potatoes", "1 palm-sized chicken portion": "1½ palm-sized chicken portions", "1 palm-sized fish portion": "1½ palm-sized fish portions",
+  }));
   return items;
 }
 
 function focusMealDetails(goal: WellnessGoal, items: string[]) {
-  if (goal === "weight_loss") return { titlePrefix: "Weight-loss plate — ", note: "A lighter staple portion with a larger vegetable side keeps this familiar meal practical and filling.", ingredients: [...items.map((item) => remapCupPortions(item, { "1¼ cups": "1 cup", "1 cup": "¾ cup", "¾ cup": "½ cup", "½ cup": "⅓ cup" }).replace(/2 thick slices/g, "1 thick slice")), "2 cups leafy greens, cabbage, carrot, cucumber, or other available vegetables"] };
-  if (goal === "weight_gain") return { titlePrefix: "Weight-gain plate — ", note: "A fuller staple portion plus a planned energy-supporting addition makes this meal visibly more substantial.", ingredients: [...items.map((item) => remapCupPortions(item, { "½ cup": "¾ cup", "¾ cup": "1 cup", "1 cup": "1¼ cups" }).replace(/2 thick slices/g, "3 thick slices")), "1 energy-supporting add-on: groundnuts, yoghurt, milk, avocado, beans, or seeds if suitable"] };
+  if (goal === "weight_loss") return { titlePrefix: "Weight-loss plate — ", note: "A lighter staple portion with a larger vegetable side keeps this familiar meal practical and filling.", ingredients: [...items, "2 cups leafy greens, cabbage, carrot, cucumber, or other available vegetables"] };
+  if (goal === "weight_gain") return { titlePrefix: "Weight-gain plate — ", note: "A fuller staple portion plus a planned energy-supporting addition makes this meal visibly more substantial.", ingredients: [...items, "1 energy-supporting add-on: groundnuts, yoghurt, milk, avocado, beans, or seeds if suitable"] };
   if (goal === "toning") return { titlePrefix: "Protein-focused plate — ", note: "Keep the familiar staple and make the protein component deliberate for this meal.", ingredients: [...items, "1 clear protein portion: beans, egg, fish, chicken, tofu, or another preferred option"] };
   if (goal === "energy") return { titlePrefix: "Steady-energy plate — ", note: "Pair the familiar meal with an available fruit or vegetable side for a practical routine.", ingredients: [...items, "1 available fruit or vegetable side"] };
   return { titlePrefix: "", note: "Keep the portion practical for your day and use the ingredients you genuinely have.", ingredients: items };

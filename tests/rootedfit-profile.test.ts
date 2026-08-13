@@ -136,7 +136,19 @@ describe("RootedFit weekly plan builder", () => {
 
     expect(weekOne.meals[0].title).not.toEqual(weekTwo.meals[0].title);
     expect(weekTwo.rotationLabel).toContain("Week 2");
-    expect(lighter.meals[0].ingredients).not.toEqual(generous.meals[0].ingredients);
+    expect(weekTwo.meals[0].ingredients).toContain("½ cup rice");
+    expect(lighter.meals[0].ingredients).toContain("⅓ cup rice");
+    expect(generous.meals[0].ingredients).toContain("¾ cup rice");
+    expect(lighter.shoppingGroups.flatMap((group) => group.items)).toContain("⅓ cup rice");
+    expect(generous.shoppingGroups.flatMap((group) => group.items)).toContain("¾ cup rice");
+  });
+
+  it("provides seven distinct day-by-day home workouts instead of a repeated two-session library", () => {
+    const plan = buildWeeklyPlan(microwaveProfile);
+
+    expect(plan.workouts).toHaveLength(7);
+    expect(new Set(plan.workouts.map((workout) => workout.title)).size).toBe(7);
+    expect(plan.workouts.map((workout) => workout.label)).toEqual(["Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Day 7"]);
   });
 
   it("formats a shareable grocery list from the selected plan rather than generic shopping placeholders", () => {
