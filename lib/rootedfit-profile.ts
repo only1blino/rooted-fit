@@ -131,7 +131,9 @@ export type ProgressPhoto = {
 export type MealSwap = { slotKey: string; recipeIndex: number };
 export type WorkoutSessionState = { workoutId: string; saved: boolean; completedAt: string | null };
 export type ReminderWeekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
-export type PlannedSessionReminder = { time: string | null; weekdays: ReminderWeekday[]; enabled: boolean; notificationIds: string[]; updatedAt: string };
+export type ReminderSchedule = { time: string | null; weekdays: ReminderWeekday[]; enabled: boolean; notificationIds: string[] };
+export type ReminderQuoteId = "steady" | "kind" | "real_life" | "custom";
+export type PlannedSessionReminder = { workout: ReminderSchedule; meal: ReminderSchedule; pauseUntil: string | null; quoteId: ReminderQuoteId; customQuote: string; updatedAt: string };
 export type DailyWaterLog = { date: string; millilitres: number };
 export type GroceryChecklistItem = { key: string; checked: boolean };
 export type LocalExerciseLog = { id: string; workoutId: string; exerciseName: string; setNumber: number; repCount: number; weightUsedKg: number | null; loggedAt: string };
@@ -150,6 +152,11 @@ export const progressPhotosStorageKey = "rootedfit.progress-photos.v1";
 export const mealSwapsStorageKey = "rootedfit.meal-swaps.v1";
 export const workoutSessionsStorageKey = "rootedfit.workout-sessions.v1";
 export const plannedSessionReminderStorageKey = "rootedfit.planned-session-reminder.v1";
+export const reminderQuoteOptions: { id: Exclude<ReminderQuoteId, "custom">; label: string; text: string }[] = [
+  { id: "steady", label: "Steady progress", text: "A small action today is enough." },
+  { id: "kind", label: "Self-kindness", text: "Meet today with patience, not pressure." },
+  { id: "real_life", label: "Real-life routine", text: "Choose the version of the plan that fits your day." },
+];
 export const waterLogsStorageKey = "rootedfit.water-logs.v1";
 export const groceryChecklistStorageKey = "rootedfit.grocery-checklist.v1";
 export const exerciseLogsStorageKey = "rootedfit.exercise-logs.v1";
@@ -586,21 +593,54 @@ export function normaliseReminderWeekdays(values: number[]): ReminderWeekday[] {
   return Array.from(new Set(values.filter((value): value is ReminderWeekday => Number.isInteger(value) && value >= 1 && value <= 7))).sort((a, b) => a - b);
 }
 
+export const defaultReminderSchedule = (): ReminderSchedule => ({ time: null, weekdays: [2, 3, 4, 5, 6], enabled: false, notificationIds: [] });
+export const defaultPlannedSessionReminder = (): PlannedSessionReminder => ({ workout: defaultReminderSchedule(), meal: defaultReminderSchedule(), pauseUntil: null, quoteId: "steady", customQuote: "", updatedAt: "" });
+
+function normaliseReminderSchedule(value: Partial<ReminderSchedule> & { notificationId?: string | null }): ReminderSchedule {
+  const notificationIds = Array.isArray(value.notificationIds) ? value.notificationIds.filter((item): item is string => typeof item === "string") : value.notificationId ? [value.notificationId] : [];
+  return { time: value.time ? normaliseReminderTime(value.time) : null, weekdays: Array.isArray(value.weekdays) ? normaliseReminderWeekdays(value.weekdays) : [2, 3, 4, 5, 6], enabled: Boolean(value.enabled), notificationIds };
+}
+
+export function reminderMotivationText(reminder: Pick<PlannedSessionReminder, "quoteId" | "customQuote">): string {
+  const custom = reminder.customQuote.trim();
+  if (reminder.quoteId === "custom" && custom) return custom;
+  return reminderQuoteOptions.find((option) => option.id === reminder.quoteId)?.text ?? reminderQuoteOptions[0].text;
+}
+
+export function oneWeekReminderPauseUntil(reference = new Date()): string {
+  const until = new Date(reference);
+  until.setDate(until.getDate() + 7);
+  return until.toISOString();
+}
+
+export function isReminderPauseActive(pauseUntil: string | null, reference = new Date()): boolean {
+  return Boolean(pauseUntil && new Date(pauseUntil).getTime() > reference.getTime());
+}
+
+export function rotatingIndexForDate(date: string, length: number): number {
+  if (length <= 0) return 0;
+  const [year, month, day] = date.split("-").map(Number);
+  const timestamp = Date.UTC(year || 1970, (month || 1) - 1, day || 1);
+  return Math.abs(Math.floor(timestamp / 86_400_000)) % length;
+}
+
 export async function loadPlannedSessionReminder(): Promise<PlannedSessionReminder> {
   const saved = await AsyncStorage.getItem(plannedSessionReminderStorageKey);
-  if (!saved) return { time: null, weekdays: [2, 3, 4, 5, 6] as ReminderWeekday[], enabled: false, notificationIds: [], updatedAt: "" };
+  if (!saved) return defaultPlannedSessionReminder();
   try {
-    const entry = JSON.parse(saved) as Partial<PlannedSessionReminder> & { notificationId?: string | null };
-    const notificationIds = Array.isArray(entry.notificationIds) ? entry.notificationIds.filter((value): value is string => typeof value === "string") : entry.notificationId ? [entry.notificationId] : [];
-    const weekdays = Array.isArray(entry.weekdays) ? normaliseReminderWeekdays(entry.weekdays) : [1, 2, 3, 4, 5, 6, 7] as ReminderWeekday[];
-    return { time: entry.time ? normaliseReminderTime(entry.time) : null, weekdays, enabled: Boolean(entry.enabled), notificationIds, updatedAt: entry.updatedAt ?? "" };
+    const entry = JSON.parse(saved) as Partial<PlannedSessionReminder> & Partial<ReminderSchedule> & { notificationId?: string | null };
+    const workout = normaliseReminderSchedule(entry.workout ?? entry);
+    const meal = normaliseReminderSchedule(entry.meal ?? {});
+    const quoteId: ReminderQuoteId = entry.quoteId === "kind" || entry.quoteId === "real_life" || entry.quoteId === "custom" ? entry.quoteId : "steady";
+    return { workout, meal, pauseUntil: typeof entry.pauseUntil === "string" ? entry.pauseUntil : null, quoteId, customQuote: typeof entry.customQuote === "string" ? entry.customQuote.slice(0, 180) : "", updatedAt: entry.updatedAt ?? "" };
   } catch {
-    return { time: null, weekdays: [2, 3, 4, 5, 6] as ReminderWeekday[], enabled: false, notificationIds: [], updatedAt: "" };
+    return defaultPlannedSessionReminder();
   }
 }
 
 export async function savePlannedSessionReminder(reminder: PlannedSessionReminder) {
-  await AsyncStorage.setItem(plannedSessionReminderStorageKey, JSON.stringify({ ...reminder, time: reminder.time ? normaliseReminderTime(reminder.time) : null, weekdays: normaliseReminderWeekdays(reminder.weekdays), notificationIds: reminder.notificationIds.slice(0, 7) }));
+  const schedule = (entry: ReminderSchedule): ReminderSchedule => ({ ...entry, time: entry.time ? normaliseReminderTime(entry.time) : null, weekdays: normaliseReminderWeekdays(entry.weekdays), notificationIds: entry.notificationIds.slice(0, 7) });
+  await AsyncStorage.setItem(plannedSessionReminderStorageKey, JSON.stringify({ ...reminder, workout: schedule(reminder.workout), meal: schedule(reminder.meal), customQuote: reminder.customQuote.trim().slice(0, 180) }));
 }
 
 export async function loadWaterLogs(): Promise<DailyWaterLog[]> {

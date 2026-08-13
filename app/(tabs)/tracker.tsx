@@ -13,6 +13,7 @@ import {
   loadProfile,
   loadProgressPhotos,
   numberOrNull,
+  rotatingIndexForDate,
   saveCheckIns,
   saveMeasurements,
   saveProgressPhotos,
@@ -185,7 +186,7 @@ export default function TrackerScreen() {
   const weightUnit = usesFeetInchesKg ? "kg" : "lb";
   const displayLength = (value: number | null) => value === null ? "Not logged" : usesFeetInchesKg ? (value / 2.54).toFixed(1) : String(value);
   const displayWeight = (value: number | null) => value === null ? "Not logged" : usesFeetInchesKg ? String(value) : (value * 2.20462).toFixed(1);
-  const dailyFocus = DAILY_AFFIRMATIONS[new Date().getDay()];
+  const dailyFocus = DAILY_AFFIRMATIONS[rotatingIndexForDate(formatToday(), DAILY_AFFIRMATIONS.length)];
 
   if (isLoading) return <ScreenContainer edges={["top", "bottom", "left", "right"]} style={styles.loading}><ActivityIndicator color="#2D6A4F" /></ScreenContainer>;
 

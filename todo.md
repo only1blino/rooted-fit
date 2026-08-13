@@ -135,3 +135,8 @@
 - [x] Add regression coverage, validate, publish, and push the reminders and feedback-dashboard release
 - [x] Let users choose specific weekdays and times for gentle session reminders
 - [x] Add regression coverage, validate, publish, and push the recurring reminder update
+- [x] Add a one-week pause for planned workout and meal reminders
+- [x] Add separate meal and workout reminder schedules with independent days and times
+- [x] Add selectable or custom motivational quotes for reminder messages
+- [x] Rotate RootedFit’s daily motivational message by date instead of repeating it
+- [x] Add regression coverage, validate, publish, and push the expanded reminders release
