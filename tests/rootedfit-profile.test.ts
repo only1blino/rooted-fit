@@ -14,7 +14,7 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
-import { applyTodayResourceSubstitutions, applyTodayUnavailableResources, buildWeeklyPlan, buildWorkoutSessionPreview, buildWorkoutWhyToday, categorizeGroceryItems, findSimilarRecipe, formatGroceryChecklistPrintHtml, formatGroceryListExport, getTodayResourceSubstituteOptions, loadCheckIns, loadCompletionRatings, loadExerciseLogs, loadGroceryChecklist, loadMealSwaps, loadMeasurements, loadProfile, loadProgressPhotos, loadResourceChangeFeedback, loadTodayResourceSubstitutions, loadTodayUnavailableResources, loadWorkoutSessionStates, numberOrNull, practicalGroceryItems, saveCheckIns, saveCompletionRatings, saveExerciseLogs, saveGroceryChecklist, saveMealSwaps, saveMeasurements, saveProfile, saveProgressPhotos, saveResourceChangeFeedback, saveTodayResourceSubstitutions, saveTodayUnavailableResources, saveWorkoutSessionStates, splitList, type UserProfile } from "../lib/rootedfit-profile";
+import { applyTodayResourceSubstitutions, applyTodayUnavailableResources, buildWeeklyPlan, buildWorkoutSessionPreview, buildWorkoutWhyToday, categorizeGroceryItems, findSimilarRecipe, formatGroceryChecklistPrintHtml, formatGroceryListExport, getTodayResourceSubstituteOptions, loadCheckIns, loadCompletionRatings, loadExerciseLogs, loadGroceryChecklist, loadMealSwaps, loadMeasurements, loadPlannedSessionReminder, loadProfile, loadProgressPhotos, loadResourceChangeFeedback, loadTodayResourceSubstitutions, loadTodayUnavailableResources, loadWorkoutSessionStates, normaliseReminderTime, numberOrNull, practicalGroceryItems, saveCheckIns, saveCompletionRatings, saveExerciseLogs, saveGroceryChecklist, saveMealSwaps, saveMeasurements, savePlannedSessionReminder, saveProfile, saveProgressPhotos, saveResourceChangeFeedback, saveTodayResourceSubstitutions, saveTodayUnavailableResources, saveWorkoutSessionStates, splitList, type UserProfile } from "../lib/rootedfit-profile";
 import { suggestedFoods, suggestedFruits, suggestedMeals } from "../lib/food-catalogue";
 
 const microwaveProfile: UserProfile = {
@@ -275,6 +275,14 @@ describe("RootedFit weekly plan builder", () => {
     const feedback = [{ id: "resource-feedback-1", changeContext: "Paused weights for today.", outcome: "needs_adjustment" as const, note: "A bodyweight alternative would help.", createdAt: "2026-08-13T12:00:00.000Z", synced: false }];
     await saveResourceChangeFeedback(feedback);
     await expect(loadResourceChangeFeedback()).resolves.toEqual(feedback);
+  });
+
+  it("normalises and persists a gentle planned-session reminder locally", async () => {
+    expect(normaliseReminderTime("7:05")).toBe("07:05");
+    expect(normaliseReminderTime("25:10")).toBeNull();
+    const reminder = { time: "18:00", enabled: true, notificationId: "native-reminder-1", updatedAt: "2026-08-13T18:00:00.000Z" };
+    await savePlannedSessionReminder(reminder);
+    await expect(loadPlannedSessionReminder()).resolves.toEqual(reminder);
   });
 
   it("finds a similar available recipe and organizes the unchanged grocery ingredients by supermarket section", () => {

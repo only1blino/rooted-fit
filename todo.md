@@ -130,3 +130,6 @@
 - [x] Add upcoming-session preview cards with duration, required equipment, and safety/setup checks
 - [x] Capture locally stored beta feedback after home-resource changes
 - [x] Add regression tests, validate, publish, and push the enhanced Workouts beta release
+- [x] Add local-first planned-session reminder settings with native notification support and web guidance
+- [x] Add a protected feedback-review dashboard for the RootedFit beta team
+- [x] Add regression coverage, validate, publish, and push the reminders and feedback-dashboard release

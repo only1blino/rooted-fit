@@ -130,6 +130,7 @@ export type ProgressPhoto = {
 
 export type MealSwap = { slotKey: string; recipeIndex: number };
 export type WorkoutSessionState = { workoutId: string; saved: boolean; completedAt: string | null };
+export type PlannedSessionReminder = { time: string | null; enabled: boolean; notificationId: string | null; updatedAt: string };
 export type DailyWaterLog = { date: string; millilitres: number };
 export type GroceryChecklistItem = { key: string; checked: boolean };
 export type LocalExerciseLog = { id: string; workoutId: string; exerciseName: string; setNumber: number; repCount: number; weightUsedKg: number | null; loggedAt: string };
@@ -147,6 +148,7 @@ export const measurementsStorageKey = "rootedfit.measurements.v1";
 export const progressPhotosStorageKey = "rootedfit.progress-photos.v1";
 export const mealSwapsStorageKey = "rootedfit.meal-swaps.v1";
 export const workoutSessionsStorageKey = "rootedfit.workout-sessions.v1";
+export const plannedSessionReminderStorageKey = "rootedfit.planned-session-reminder.v1";
 export const waterLogsStorageKey = "rootedfit.water-logs.v1";
 export const groceryChecklistStorageKey = "rootedfit.grocery-checklist.v1";
 export const exerciseLogsStorageKey = "rootedfit.exercise-logs.v1";
@@ -505,7 +507,7 @@ export async function saveProfile(profile: UserProfile) {
 }
 
 export async function clearProfile() {
-  await AsyncStorage.multiRemove([profileStorageKey, legacyProfileStorageKey, checkInsStorageKey, measurementsStorageKey, progressPhotosStorageKey, mealSwapsStorageKey, workoutSessionsStorageKey, waterLogsStorageKey, groceryChecklistStorageKey, exerciseLogsStorageKey, completionRatingsStorageKey, todayUnavailableResourcesStorageKey, todayResourceSubstitutionsStorageKey, resourceChangeFeedbackStorageKey]);
+  await AsyncStorage.multiRemove([profileStorageKey, legacyProfileStorageKey, checkInsStorageKey, measurementsStorageKey, progressPhotosStorageKey, mealSwapsStorageKey, workoutSessionsStorageKey, plannedSessionReminderStorageKey, waterLogsStorageKey, groceryChecklistStorageKey, exerciseLogsStorageKey, completionRatingsStorageKey, todayUnavailableResourcesStorageKey, todayResourceSubstitutionsStorageKey, resourceChangeFeedbackStorageKey]);
 }
 
 export async function loadCheckIns(): Promise<DailyCheckIn[]> {
@@ -568,6 +570,30 @@ export async function loadWorkoutSessionStates(): Promise<WorkoutSessionState[]>
 
 export async function saveWorkoutSessionStates(states: WorkoutSessionState[]) {
   await AsyncStorage.setItem(workoutSessionsStorageKey, JSON.stringify(states.slice(0, 100)));
+}
+
+export function normaliseReminderTime(value: string): string | null {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
+  if (!match) return null;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (!Number.isInteger(hour) || !Number.isInteger(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+export async function loadPlannedSessionReminder(): Promise<PlannedSessionReminder> {
+  const saved = await AsyncStorage.getItem(plannedSessionReminderStorageKey);
+  if (!saved) return { time: null, enabled: false, notificationId: null, updatedAt: "" };
+  try {
+    const entry = JSON.parse(saved) as PlannedSessionReminder;
+    return { time: entry.time && normaliseReminderTime(entry.time), enabled: Boolean(entry.enabled), notificationId: entry.notificationId ?? null, updatedAt: entry.updatedAt ?? "" };
+  } catch {
+    return { time: null, enabled: false, notificationId: null, updatedAt: "" };
+  }
+}
+
+export async function savePlannedSessionReminder(reminder: PlannedSessionReminder) {
+  await AsyncStorage.setItem(plannedSessionReminderStorageKey, JSON.stringify({ ...reminder, time: reminder.time ? normaliseReminderTime(reminder.time) : null }));
 }
 
 export async function loadWaterLogs(): Promise<DailyWaterLog[]> {

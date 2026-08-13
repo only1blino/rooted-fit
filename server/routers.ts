@@ -3,7 +3,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { z } from "zod";
 import * as db from "./db";
-import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 
 export const appRouter = router({
   // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -36,6 +36,7 @@ export const appRouter = router({
       message: z.string().trim().min(8).max(2000),
       pageUrl: z.string().url().max(1024).optional(),
     })).mutation(({ input }) => db.createTesterFeedback(input)),
+    list: adminProcedure.input(z.object({ limit: z.number().int().min(1).max(500).optional() }).optional()).query(({ input }) => db.listTesterFeedback(input?.limit)),
   }),
 
   // TODO: add feature routers here, e.g.

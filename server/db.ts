@@ -1,5 +1,5 @@
-import { desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import { desc, eq } from "drizzle-orm";
 import { InsertUser, users } from "../drizzle/schema";
 import { exerciseLogs } from "../drizzle/exercise-logs.schema";
 import { rootedFitTesterFeedback } from "../drizzle/tester-feedback.schema";
@@ -120,6 +120,12 @@ export async function createTesterFeedback(input: { category: string; message: s
     pageUrl: input.pageUrl || null,
   });
   return { success: true } as const;
+}
+
+export async function listTesterFeedback(limit = 250) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(rootedFitTesterFeedback).orderBy(desc(rootedFitTesterFeedback.createdAt)).limit(Math.max(1, Math.min(limit, 500)));
 }
 
 // TODO: add feature queries here as your schema grows.
