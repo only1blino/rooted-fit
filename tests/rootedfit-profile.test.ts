@@ -204,6 +204,17 @@ describe("RootedFit weekly plan builder", () => {
     expect(plan.workouts[0].instructorOptions[1].label).toBe("Woman-led option");
   });
 
+  it("keeps seven sessions distinct and changes the follow-along links for each selected difficulty", () => {
+    const beginner = buildWeeklyPlan({ ...microwaveProfile, workoutDifficulty: "beginner" });
+    const intermediate = buildWeeklyPlan({ ...microwaveProfile, workoutDifficulty: "intermediate" });
+    const advanced = buildWeeklyPlan({ ...microwaveProfile, workoutDifficulty: "advanced" });
+
+    expect(new Set(beginner.workouts.map((workout) => workout.title)).size).toBe(7);
+    expect(beginner.workouts[3].videoUrl).not.toBe(intermediate.workouts[3].videoUrl);
+    expect(intermediate.workouts[3].videoUrl).not.toBe(advanced.workouts[3].videoUrl);
+    expect(beginner.workouts[3].instructorOptions.map((option) => option.kind)).toEqual(["woman", "man"]);
+  });
+
   it("finds a similar available recipe and organizes the unchanged grocery ingredients by supermarket section", () => {
     const plan = buildWeeklyPlan(microwaveProfile);
     const replacement = findSimilarRecipe(plan, plan.meals[0].sourceTitle ?? "", false);

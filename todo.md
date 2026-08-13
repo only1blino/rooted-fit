@@ -113,4 +113,9 @@
 - [x] Replace recipe-fraction grocery lines with practical household shopping quantities and purchase units
 - [x] Keep detailed recipe portions separate from the realistic grocery checklist and exports
 - [x] Add regression coverage for instructor selection and practical grocery aggregation
-- [ ] Validate, publish, and push the inclusive web and Expo release to GitHub
+- [x] Validate, publish, and push the inclusive web and Expo release to GitHub
+- [x] Fix the workout day navigator so Day 2–Day 7 remain selected instead of returning to Day 1
+- [x] Add a manual man-led or woman-led instructor toggle for every workout day
+- [x] Assign distinct follow-along video resources for beginner, intermediate, and advanced levels
+- [x] Add regression coverage for retained day selection, instructor toggles, and level-specific video changes
+- [ ] Validate, publish, and push the corrected workout controls to web, Expo, and GitHub

@@ -5,7 +5,7 @@ export type ShoppingFrequency = "daily" | "weekly" | "biweekly" | "monthly";
 export type MealFrequency = "one_plus_snack" | "two" | "three";
 export type ServingSize = "lighter" | "regular" | "generous";
 export type WorkoutDifficulty = "beginner" | "intermediate" | "advanced";
-export type WorkoutInstructorOption = { label: string; name: string; videoTitle: string; videoUrl: string; videoProvider: string };
+export type WorkoutInstructorOption = { kind: "man" | "woman"; label: string; name: string; videoTitle: string; videoUrl: string; videoProvider: string };
 export type SweetToothPreference = "none" | "healthier_swaps" | "portion_guidance";
 export type WellnessGoal = "consistency" | "energy" | "toning" | "core_mobility" | "body_composition" | "weight_loss" | "weight_gain" | null;
 export type MeasurementUnit = "ft_in_kg" | "cm_lb";
@@ -568,28 +568,37 @@ export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
     { title: "Recovery flow: restore and reset", category: "Recovery & mobility", instructions: ["Choose a calm space and take 6 slow breaths.", "Move gently through 8 cat-cow or seated spinal rolls, 8 hip circles per side, and 30 seconds of a comfortable child’s pose or chair fold.", "Finish with one sentence about what made movement possible today; no performance target is needed."], videoTitle: "30-Minute Yoga For Beginners", videoUrl: "https://www.youtube.com/watch?v=AB3Y-4a3ZrU", videoProvider: "Yoga With Adriene" },
   ];
   const maleInstructorOptions: WorkoutInstructorOption[] = [
-    { label: "Man-led option", name: "Joe Wicks", videoTitle: "10 Minute FULL BODY Workout", videoUrl: "https://www.youtube.com/watch?v=KrmYjcQzSsQ", videoProvider: "The Body Coach" },
-    { label: "Man-led option", name: "Joe Wicks", videoTitle: "10 Minute Abs Workout", videoUrl: "https://www.youtube.com/watch?v=aWJo_Fe20aE", videoProvider: "The Body Coach" },
-    { label: "Man-led option", name: "Joe Wicks", videoTitle: "First Steps To Fitness · Workout 1", videoUrl: "https://www.youtube.com/watch?v=JnCfnYPKc7w", videoProvider: "The Body Coach" },
-    { label: "Man-led option", name: "Joe Wicks", videoTitle: "First Steps To Fitness · Workout 2", videoUrl: "https://www.youtube.com/watch?v=mvMPjDLBBrk", videoProvider: "The Body Coach" },
-    { label: "Man-led option", name: "Joe Wicks", videoTitle: "Savage 10 Minute Leg Burner", videoUrl: "https://www.youtube.com/watch?v=5cAh3m5HCpw", videoProvider: "The Body Coach" },
-    { label: "Man-led option", name: "Joe Wicks", videoTitle: "7 Days of SWEAT · Day 1", videoUrl: "https://www.youtube.com/watch?v=5gvto1CA7Po", videoProvider: "The Body Coach" },
-    { label: "Man-led option", name: "Joe Wicks", videoTitle: "First Steps To Fitness · Workout 3", videoUrl: "https://www.youtube.com/watch?v=p5CKZupTBxo", videoProvider: "The Body Coach" },
+    { kind: "man", label: "Man-led option", name: "Joe Wicks", videoTitle: "10 Minute FULL BODY Workout", videoUrl: "https://www.youtube.com/watch?v=KrmYjcQzSsQ", videoProvider: "The Body Coach" },
+    { kind: "man", label: "Man-led option", name: "Joe Wicks", videoTitle: "10 Minute Abs Workout", videoUrl: "https://www.youtube.com/watch?v=aWJo_Fe20aE", videoProvider: "The Body Coach" },
+    { kind: "man", label: "Man-led option", name: "Joe Wicks", videoTitle: "First Steps To Fitness · Workout 1", videoUrl: "https://www.youtube.com/watch?v=JnCfnYPKc7w", videoProvider: "The Body Coach" },
+    { kind: "man", label: "Man-led option", name: "Joe Wicks", videoTitle: "First Steps To Fitness · Workout 2", videoUrl: "https://www.youtube.com/watch?v=mvMPjDLBBrk", videoProvider: "The Body Coach" },
+    { kind: "man", label: "Man-led option", name: "Joe Wicks", videoTitle: "Savage 10 Minute Leg Burner", videoUrl: "https://www.youtube.com/watch?v=5cAh3m5HCpw", videoProvider: "The Body Coach" },
+    { kind: "man", label: "Man-led option", name: "Joe Wicks", videoTitle: "7 Days of SWEAT · Day 1", videoUrl: "https://www.youtube.com/watch?v=5gvto1CA7Po", videoProvider: "The Body Coach" },
+    { kind: "man", label: "Man-led option", name: "Joe Wicks", videoTitle: "First Steps To Fitness · Workout 3", videoUrl: "https://www.youtube.com/watch?v=p5CKZupTBxo", videoProvider: "The Body Coach" },
   ];
   const difficulty = difficultyAdaptation(profile.workoutDifficulty);
-  const workoutPlan = labels.map((label, index) => ({
-    ...workoutTemplates[index],
-    day: index + 1,
-    label,
-    durationMinutes: Math.max(10, durationMinutes + difficulty.durationAdjustment),
-    instructions: [...workoutTemplates[index].instructions, difficulty.instruction],
-    adaptation: `${difficulty.label} level. ${movementAdaptation(profile)} Keep the session pain-free; pause or choose a gentler option if anything feels wrong.`,
-    difficulty: profile.workoutDifficulty,
-    instructorOptions: profile.genderIdentity === "Man"
-      ? [maleInstructorOptions[index], { label: "Woman-led option", name: workoutTemplates[index].videoProvider, videoTitle: workoutTemplates[index].videoTitle, videoUrl: workoutTemplates[index].videoUrl, videoProvider: workoutTemplates[index].videoProvider }]
-      : [{ label: profile.genderIdentity === "Woman" ? "Woman-led option" : "Featured option", name: workoutTemplates[index].videoProvider, videoTitle: workoutTemplates[index].videoTitle, videoUrl: workoutTemplates[index].videoUrl, videoProvider: workoutTemplates[index].videoProvider }, maleInstructorOptions[index]],
-    ...(profile.genderIdentity === "Man" ? { videoTitle: maleInstructorOptions[index].videoTitle, videoUrl: maleInstructorOptions[index].videoUrl, videoProvider: maleInstructorOptions[index].videoProvider } : {}),
-  }));
+  const levelVideoOffset: Record<WorkoutDifficulty, number> = { beginner: 0, intermediate: 1, advanced: 2 };
+  const workoutPlan = labels.map((label, index) => {
+    const offset = levelVideoOffset[profile.workoutDifficulty];
+    const womanTemplate = workoutTemplates[(index + offset) % workoutTemplates.length];
+    const womanOption: WorkoutInstructorOption = { kind: "woman", label: "Woman-led option", name: womanTemplate.videoProvider, videoTitle: womanTemplate.videoTitle, videoUrl: womanTemplate.videoUrl, videoProvider: womanTemplate.videoProvider };
+    const manOption = maleInstructorOptions[(index + offset) % maleInstructorOptions.length];
+    const instructorOptions = profile.genderIdentity === "Man" ? [manOption, womanOption] : [womanOption, manOption];
+    const defaultOption = instructorOptions[0];
+    return {
+      ...workoutTemplates[index],
+      day: index + 1,
+      label,
+      durationMinutes: Math.max(10, durationMinutes + difficulty.durationAdjustment),
+      instructions: [...workoutTemplates[index].instructions, difficulty.instruction],
+      adaptation: `${difficulty.label} level. ${movementAdaptation(profile)} Keep the session pain-free; pause or choose a gentler option if anything feels wrong.`,
+      difficulty: profile.workoutDifficulty,
+      instructorOptions,
+      videoTitle: defaultOption.videoTitle,
+      videoUrl: defaultOption.videoUrl,
+      videoProvider: defaultOption.videoProvider,
+    };
+  });
 
   const longerShopping = profile.shoppingFrequency === "biweekly" || profile.shoppingFrequency === "monthly";
   const categorizedGroceries = categorizeGroceryItems(practicalGroceryItems([
