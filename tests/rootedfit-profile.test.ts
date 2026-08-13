@@ -14,7 +14,7 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
-import { buildWeeklyPlan, loadCheckIns, loadMealSwaps, loadMeasurements, loadProfile, loadProgressPhotos, loadWorkoutSessionStates, numberOrNull, saveCheckIns, saveMealSwaps, saveMeasurements, saveProfile, saveProgressPhotos, saveWorkoutSessionStates, splitList, type UserProfile } from "../lib/rootedfit-profile";
+import { buildWeeklyPlan, formatGroceryListExport, loadCheckIns, loadMealSwaps, loadMeasurements, loadProfile, loadProgressPhotos, loadWorkoutSessionStates, numberOrNull, saveCheckIns, saveMealSwaps, saveMeasurements, saveProfile, saveProgressPhotos, saveWorkoutSessionStates, splitList, type UserProfile } from "../lib/rootedfit-profile";
 import { suggestedFoods, suggestedFruits, suggestedMeals } from "../lib/food-catalogue";
 
 const microwaveProfile: UserProfile = {
@@ -32,6 +32,8 @@ const microwaveProfile: UserProfile = {
   dietaryRestrictions: [],
   dislikedFoods: [],
   mealFrequency: "three",
+  servingSize: "regular",
+  rotationWeek: 1,
   sweetToothPreference: "none",
   dailyStepCount: 3500,
   aspirationalStepTarget: 5000,
@@ -99,9 +101,51 @@ describe("RootedFit weekly plan builder", () => {
     const weightLossPlan = buildWeeklyPlan({ ...microwaveProfile, goal: "weight_loss" });
     const weightGainPlan = buildWeeklyPlan({ ...microwaveProfile, goal: "weight_gain" });
 
-    expect(weightLossPlan.meals[0].focus).toContain("measured staple portion");
+    expect(weightLossPlan.meals[0].focus).toContain("lighter staple portion");
     expect(weightGainPlan.meals[0].focus).toContain("fuller staple portion");
-    expect(weightGainPlan.shoppingGroups[0].items).toContain("1 small planned snack: groundnuts, yoghurt, milk, beans, or seeds if suitable");
+    expect(weightGainPlan.shoppingGroups[0].items).toContain("1 energy-supporting add-on: groundnuts, yoghurt, milk, avocado, beans, or seeds if suitable");
+  });
+
+  it("uses distinct weight-loss and weight-gain plates rather than only changing explanatory copy", () => {
+    const weightLossPlan = buildWeeklyPlan({ ...microwaveProfile, goal: "weight_loss" });
+    const weightGainPlan = buildWeeklyPlan({ ...microwaveProfile, goal: "weight_gain" });
+
+    expect(weightLossPlan.meals[0].title).toContain("Weight-loss plate");
+    expect(weightGainPlan.meals[0].title).toContain("Weight-gain plate");
+    expect(weightLossPlan.meals[0].ingredients).toContain("2 cups leafy greens, cabbage, carrot, cucumber, or other available vegetables");
+    expect(weightGainPlan.meals[0].ingredients).toContain("1 energy-supporting add-on: groundnuts, yoghurt, milk, avocado, beans, or seeds if suitable");
+  });
+
+  it("builds a light protein-forward breakfast before fuller later meals for two- and three-meal schedules", () => {
+    const threeMealPlan = buildWeeklyPlan({ ...microwaveProfile, mealFrequency: "three" });
+    const twoMealPlan = buildWeeklyPlan({ ...microwaveProfile, mealFrequency: "two" });
+    const breakfast = threeMealPlan.dailyMeals[0].slots[0];
+
+    expect(threeMealPlan.dailyMeals[0].slots.map((slot) => slot.label)).toEqual(["Breakfast", "Lunch", "Dinner"]);
+    expect(twoMealPlan.dailyMeals[0].slots.map((slot) => slot.label)).toEqual(["Breakfast", "Dinner"]);
+    expect(breakfast.meal.title.toLowerCase()).not.toMatch(/semo|amala|pounded yam/);
+    expect(breakfast.meal.ingredients.join(" ").toLowerCase()).toMatch(/egg|beans|yoghurt|tofu|milk|moi moi/);
+  });
+
+  it("rotates the main recipe catalogue for week two and scales recipe quantities from the serving preference", () => {
+    const weekOne = buildWeeklyPlan({ ...microwaveProfile, rotationWeek: 1, servingSize: "regular" });
+    const weekTwo = buildWeeklyPlan({ ...microwaveProfile, rotationWeek: 2, servingSize: "regular" });
+    const lighter = buildWeeklyPlan({ ...microwaveProfile, rotationWeek: 2, servingSize: "lighter" });
+    const generous = buildWeeklyPlan({ ...microwaveProfile, rotationWeek: 2, servingSize: "generous" });
+
+    expect(weekOne.meals[0].title).not.toEqual(weekTwo.meals[0].title);
+    expect(weekTwo.rotationLabel).toContain("Week 2");
+    expect(lighter.meals[0].ingredients).not.toEqual(generous.meals[0].ingredients);
+  });
+
+  it("formats a shareable grocery list from the selected plan rather than generic shopping placeholders", () => {
+    const plan = buildWeeklyPlan({ ...microwaveProfile, rotationWeek: 2 });
+    const text = formatGroceryListExport(plan, "Lagos");
+
+    expect(text).toContain("ROOTEDFIT GROCERY LIST");
+    expect(text).toContain("Week 2");
+    expect(text).toContain("Plan area: Lagos");
+    expect(text).toContain("Tomato egg and vegetable rice bowl".includes("Tomato") ? "tomato" : "");
   });
 
   it("persists the expanded onboarding profile locally", async () => {

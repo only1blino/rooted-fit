@@ -3,6 +3,7 @@ import type { FoodCountry } from "@/lib/food-catalogue";
 
 export type ShoppingFrequency = "daily" | "weekly" | "biweekly" | "monthly";
 export type MealFrequency = "one_plus_snack" | "two" | "three";
+export type ServingSize = "lighter" | "regular" | "generous";
 export type SweetToothPreference = "none" | "healthier_swaps" | "portion_guidance";
 export type WellnessGoal = "consistency" | "energy" | "toning" | "core_mobility" | "body_composition" | "weight_loss" | "weight_gain" | null;
 export type MeasurementUnit = "ft_in_kg" | "cm_lb";
@@ -23,6 +24,8 @@ export type UserProfile = {
   dietaryRestrictions: string[];
   dislikedFoods: string[];
   mealFrequency: MealFrequency;
+  servingSize: ServingSize;
+  rotationWeek: 1 | 2;
   sweetToothPreference: SweetToothPreference;
   dailyStepCount: number;
   aspirationalStepTarget: number;
@@ -71,11 +74,13 @@ export type ShoppingGroup = {
 };
 
 export type WeeklyPlan = {
+  rotationLabel: string;
   goalTitle: string;
   goalMessage: string;
   safetyNote: string;
   electricityNote: string;
   meals: MealDay[];
+  breakfastMeals: MealDay[];
   dailyMeals: { day: number; label: string; slots: { label: string; meal: MealDay }[]; snackIdeas: string[] }[];
   workouts: WorkoutDay[];
   shoppingGroups: ShoppingGroup[];
@@ -139,6 +144,8 @@ export const emptyProfile: UserProfile = {
   dietaryRestrictions: [],
   dislikedFoods: [],
   mealFrequency: "three",
+  servingSize: "regular",
+  rotationWeek: 1,
   sweetToothPreference: "none",
   dailyStepCount: 0,
   aspirationalStepTarget: 0,
@@ -171,6 +178,8 @@ function normaliseProfile(profile: Partial<UserProfile>): UserProfile {
     workoutResources: profile.workoutResources ?? [],
     otherWorkoutResources: profile.otherWorkoutResources ?? [],
     secondaryFocuses: profile.secondaryFocuses ?? [],
+    servingSize: profile.servingSize === "lighter" || profile.servingSize === "generous" ? profile.servingSize : "regular",
+    rotationWeek: profile.rotationWeek === 2 ? 2 : 1,
     measurementUnit: legacyMeasurementUnit === "imperial" ? "ft_in_kg" : legacyMeasurementUnit === "metric" ? "cm_lb" : legacyMeasurementUnit === "cm_lb" ? "cm_lb" : "ft_in_kg",
   };
 }
@@ -218,6 +227,29 @@ function cookingMethod(profile: UserProfile) {
   if (profile.kitchenEquipment.includes("Air fryer")) return "air-fry or warm";
   if (profile.kitchenEquipment.includes("Kettle")) return "rehydrate or warm with boiled water";
   return "assemble";
+}
+
+function remapCupPortions(item: string, mapping: Record<string, string>) {
+  return item.replace(/1¼ cups|1 cup|¾ cup|½ cup/g, (portion) => mapping[portion] ?? portion);
+}
+
+function applyServingPreference(items: string[], servingSize: ServingSize) {
+  if (servingSize === "lighter") return items.map((item) => remapCupPortions(item, { "1¼ cups": "1 cup", "1 cup": "¾ cup", "¾ cup": "½ cup", "½ cup": "⅓ cup" }).replace(/2 thick slices/g, "1 thick slice").replace(/1 chapati/g, "½ chapati"));
+  if (servingSize === "generous") return items.map((item) => remapCupPortions(item, { "½ cup": "¾ cup", "¾ cup": "1 cup", "1 cup": "1¼ cups" }).replace(/2 thick slices/g, "3 thick slices").replace(/1 chapati/g, "1½ chapati"));
+  return items;
+}
+
+function focusMealDetails(goal: WellnessGoal, items: string[]) {
+  if (goal === "weight_loss") return { titlePrefix: "Weight-loss plate — ", note: "A lighter staple portion with a larger vegetable side keeps this familiar meal practical and filling.", ingredients: [...items.map((item) => remapCupPortions(item, { "1¼ cups": "1 cup", "1 cup": "¾ cup", "¾ cup": "½ cup", "½ cup": "⅓ cup" }).replace(/2 thick slices/g, "1 thick slice")), "2 cups leafy greens, cabbage, carrot, cucumber, or other available vegetables"] };
+  if (goal === "weight_gain") return { titlePrefix: "Weight-gain plate — ", note: "A fuller staple portion plus a planned energy-supporting addition makes this meal visibly more substantial.", ingredients: [...items.map((item) => remapCupPortions(item, { "½ cup": "¾ cup", "¾ cup": "1 cup", "1 cup": "1¼ cups" }).replace(/2 thick slices/g, "3 thick slices")), "1 energy-supporting add-on: groundnuts, yoghurt, milk, avocado, beans, or seeds if suitable"] };
+  if (goal === "toning") return { titlePrefix: "Protein-focused plate — ", note: "Keep the familiar staple and make the protein component deliberate for this meal.", ingredients: [...items, "1 clear protein portion: beans, egg, fish, chicken, tofu, or another preferred option"] };
+  if (goal === "energy") return { titlePrefix: "Steady-energy plate — ", note: "Pair the familiar meal with an available fruit or vegetable side for a practical routine.", ingredients: [...items, "1 available fruit or vegetable side"] };
+  return { titlePrefix: "", note: "Keep the portion practical for your day and use the ingredients you genuinely have.", ingredients: items };
+}
+
+export function formatGroceryListExport(plan: WeeklyPlan, city = "your area") {
+  const groups = plan.shoppingGroups.map((group) => `${group.title}\n${group.items.map((item) => `□ ${item}`).join("\n")}`).join("\n\n");
+  return `ROOTEDFIT GROCERY LIST\n${plan.rotationLabel}\nPlan area: ${city || "your area"}\n\n${groups}\n\nBuilt from the recipes in this local plan. Choose quantities that fit your household, storage, and shopping rhythm.`;
 }
 
 function movementAdaptation(profile: UserProfile) {
@@ -375,18 +407,41 @@ export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
     { title: "Chapati-style bean and vegetable stew", focus: "A practical bean stew paired with a familiar flatbread when available", ingredients: ["1 chapati or other flatbread", "½ cup cooked beans", "½ onion", "1 tomato", "½ carrot", "1 teaspoon oil", "Pinch of cumin or coriander if available"], steps: ["Cook onion, carrot, and tomato in the oil until softened.", "Add the beans, season with a pinch of cumin or coriander if you use it, and simmer with a little water for 5 minutes.", "Warm the chapati or use another familiar flatbread.", "Serve the bean stew with the flatbread and any cucumber or greens you have."], drink: `Water with ${fruit}.` },
   ];
   const regionalRecipes = profile.country === "Ghana" ? ghanaRecipes : profile.country === "Kenya" ? kenyaRecipes : nigeriaRecipes;
-  const restrictionSafeRecipes = regionalRecipes.filter((recipe) => !excluded.some((item) => `${recipe.title} ${recipe.ingredients.join(" ")}`.toLowerCase().includes(item)));
+  const weekTwoRecipes: Omit<MealDay, "day" | "label" | "storageNote" | "equipmentNote">[] = [
+    { title: "Tomato egg and vegetable rice bowl", focus: "A quick tomato-and-egg main meal with vegetables and a moderate rice base", ingredients: ["½ cup rice", "2 eggs", "1 tomato", "¼ onion", "1 cup cabbage, spinach, or other greens", "1 teaspoon oil"], steps: ["Cook the rice until tender and set aside.", "Cook onion and tomato in the oil until soft, then add the greens.", "Beat the eggs into the vegetables and fold until just set.", "Serve the egg and vegetable mixture over the rice."], drink: "Water or unsweetened tea." },
+    { title: "Beans, greens, and roasted plantain bowl", focus: "A satisfying bean-based bowl with vegetables and a small plantain side", ingredients: ["¾ cup cooked beans", "½ ripe plantain", "½ onion", "1 tomato", "1 cup leafy greens", "1 teaspoon oil"], steps: ["Cook onion and tomato in oil until soft.", "Add cooked beans and a little water; simmer for 5 minutes.", "Fold in greens until softened.", "Bake, air-fry, or pan-cook plantain with minimal oil and serve alongside."], drink: "Water or unsweetened hibiscus drink made with safe water." },
+    { title: "Fish tomato stew with rice and cabbage", focus: "A familiar tomato stew with a clear fish portion and crunchy vegetables", ingredients: ["½ cup rice", "1 palm-sized fish portion", "2 tomatoes", "½ onion", "1 cup shredded cabbage and carrot", "1 teaspoon oil"], steps: ["Cook rice until tender.", "Cook onion and tomato in the oil until the sauce thickens.", "Add fish with a splash of water and simmer until cooked through.", "Serve with rice and cabbage-carrot slaw."], drink: `Water with ${fruit} later in the day.` },
+    { title: "Lentil and vegetable pot with flatbread", focus: "A quick plant-based pot with a modest flatbread portion", ingredients: ["¾ cup cooked lentils", "½ onion", "1 tomato", "½ carrot", "1 cup leafy greens", "1 chapati or other flatbread", "1 teaspoon oil"], steps: ["Cook onion, carrot, and tomato in the oil until softened.", "Add lentils and a splash of water; simmer until warmed through.", "Fold in greens until just soft.", "Warm the flatbread and serve with the lentil pot."], drink: "Water or unsweetened ginger tea." },
+    { title: "Chicken pepper soup with sweet potato and greens", focus: "A broth-led meal with a clear chicken portion and a modest root-vegetable side", ingredients: ["1 palm-sized chicken portion", "1 small sweet potato", "½ onion", "1 teaspoon pepper-soup spice", "1 cup leafy greens", "Fresh pepper to taste"], steps: ["Peel and cube the sweet potato; boil until tender.", "Simmer chicken, onion, spice, and pepper in water until the chicken is cooked through.", "Add greens for the final minute.", "Serve the soup with the sweet potato on the side."], drink: "Water; the soup broth is part of the meal." },
+    { title: "Groundnut vegetable stew with rice", focus: "A plant-based stew that uses a familiar groundnut flavour and fresh vegetables", ingredients: ["½ cup rice", "¾ cup cooked beans or tofu", "1 tablespoon groundnut paste", "1 tomato", "½ onion", "1 cup greens or cabbage", "1 teaspoon oil"], steps: ["Cook rice until tender.", "Cook onion and tomato in oil until soft.", "Stir in groundnut paste with a little water, then add beans or tofu and simmer gently.", "Fold in greens and serve with rice."], drink: `Water and ${fruit}.` },
+    { title: "Egg, tomato, and leafy-green bean bowl", focus: "A protein-forward beans-and-eggs main meal with vegetables", ingredients: ["¾ cup cooked beans", "2 eggs", "1 tomato", "¼ onion", "1 cup leafy greens", "1 teaspoon oil"], steps: ["Cook onion and tomato in oil until soft.", "Add beans with a splash of water and warm through.", "Fold in greens until softened.", "Cook eggs separately or stir them into the pan and serve over the beans."], drink: "Water or unsweetened tea." },
+  ];
+  const breakfastRecipes: Omit<MealDay, "day" | "label" | "storageNote" | "equipmentNote">[] = [
+    { title: "Quick eggs with tomato, greens, and one slice of bread", focus: "A light, protein-forward breakfast that can be ready in a small pan", ingredients: ["2 eggs", "1 small tomato", "¼ onion", "½ cup spinach or other greens", "1 slice bread", "1 teaspoon oil"], steps: ["Dice tomato and onion.", "Cook onion and tomato in the oil for 2 minutes, then add greens.", "Beat in eggs and fold gently until just set.", "Serve with one slice of bread."], drink: "Water or unsweetened tea." },
+    { title: "Bean and cucumber breakfast cup", focus: "A light beans-based breakfast with a crunchy vegetable side", ingredients: ["½ cup cooked beans", "½ cucumber", "¼ onion", "1 teaspoon oil", "Small slice bread or ½ chapati"], steps: ["Warm beans with onion and a small splash of water.", "Slice cucumber.", "Serve the beans with cucumber and the small bread or flatbread portion."], drink: `Water and a portion of ${fruit}.` },
+    { title: "Yoghurt, oats, fruit, and groundnut cup", focus: "A no-cook protein-and-fibre breakfast when safe cold storage is available", ingredients: ["¾ cup plain yoghurt or fortified soy yoghurt", "¼ cup oats", `1 portion ${fruit}`, "1 tablespoon groundnuts or seeds"], steps: ["Add yoghurt to a clean bowl.", "Stir in oats and groundnuts or seeds.", "Add chopped fruit and eat straight away."], drink: "Water; the yoghurt cup is the meal." },
+    { title: "Moi moi with cucumber and tomato", focus: "A familiar bean-based breakfast with a lighter vegetable side", ingredients: ["1 small moi moi portion", "½ cucumber", "1 tomato", "1 boiled egg if suitable"], steps: ["Use freshly prepared or safely stored moi moi.", "Slice cucumber and tomato.", "Serve with an egg if it fits your preferences."], drink: "Water or unsweetened tea." },
+    { title: "Pap or oats with egg and groundnuts", focus: "A warm, easy breakfast with a defined protein addition", ingredients: ["¾ cup pap or cooked oats", "1 boiled or scrambled egg", "1 tablespoon groundnuts or seeds", `1 portion ${fruit}`], steps: ["Prepare pap or oats according to the packet or household method.", "Cook or warm the egg.", "Serve with groundnuts or seeds and fruit."], drink: "Water; the pap or oats is part of the meal." },
+    { title: "Tofu and vegetable breakfast scramble", focus: "A plant-based, quick breakfast with vegetables and a small bread portion", ingredients: ["¾ cup firm tofu", "1 tomato", "¼ onion", "½ cup greens", "1 slice bread", "1 teaspoon oil"], steps: ["Crumble tofu with a fork.", "Cook onion and tomato in the oil, then add tofu and greens.", "Fold until hot and serve with one slice of bread."], drink: "Water or unsweetened tea." },
+    { title: "Milk or soy milk fruit smoothie with boiled egg", focus: "A quick, light breakfast for days with a blender or ready-to-drink milk", ingredients: ["1 cup milk or fortified soy milk", `1 portion ${fruit}`, "¼ cup oats", "1 boiled egg"], steps: ["Blend milk, fruit, and oats if you have a blender, or stir the oats into the milk and eat with fruit.", "Serve with a boiled egg.", "Use a no-cook beans option instead if egg does not fit your preferences."], drink: "Water if you are thirsty; the smoothie is part of the meal." },
+  ];
+  const rotationRecipes = profile.rotationWeek === 2 ? weekTwoRecipes : regionalRecipes;
+  const restrictionSafeRecipes = rotationRecipes.filter((recipe) => !excluded.some((item) => `${recipe.title} ${recipe.ingredients.join(" ")}`.toLowerCase().includes(item)));
   const plantBasedRecipes = restrictionSafeRecipes.filter((recipe) => !/(chicken|fish|egg|catfish)/i.test(`${recipe.title} ${recipe.ingredients.join(" ")}`));
   const usableRecipes = usesAnimalFoods ? restrictionSafeRecipes : plantBasedRecipes.length ? plantBasedRecipes : restrictionSafeRecipes;
-  const focusAdjustment = profile.goal === "weight_loss" ? { note: "Use the measured staple portion shown and add an extra cup of available vegetables or greens where possible.", adapt: (items: string[]) => [...items.map((item) => item.replace("¾ cup", "½ cup")), "1 extra cup available leafy greens, cabbage, carrot, or cucumber"] } : profile.goal === "weight_gain" ? { note: "Use the fuller staple portion shown and include one extra planned snack or energy-dense addition that fits your preferences.", adapt: (items: string[]) => [...items.map((item) => item.replace("¾ cup", "1 cup").replace("½ cup", "¾ cup")), "1 small planned snack: groundnuts, yoghurt, milk, beans, or seeds if suitable"] } : profile.goal === "toning" ? { note: "Keep a regular staple portion and make the protein component intentional for this meal.", adapt: (items: string[]) => [...items, "1 intentional protein portion: beans, egg, fish, chicken, tofu, or another preferred option"] } : profile.goal === "energy" ? { note: "Keep this meal practical and include the available fruit or vegetable side listed for a steadier rhythm.", adapt: (items: string[]) => [...items, "1 available fruit or vegetable side"] } : { note: "Keep the portion practical for your day and use the ingredients you genuinely have.", adapt: (items: string[]) => items };
-  const mealPlan = labels.map((label, index) => { const recipe = usableRecipes.length ? usableRecipes[index % usableRecipes.length] : regionalRecipes[0]; const titleSuffix = profile.goal === "weight_loss" ? " with an extra vegetable side" : profile.goal === "weight_gain" ? " with a planned energy-supporting snack" : profile.goal === "toning" ? " with an intentional protein side" : profile.goal === "energy" ? " with a fruit or vegetable side" : ""; return { ...recipe, title: `${recipe.title}${titleSuffix}`, ingredients: focusAdjustment.adapt(recipe.ingredients), focus: `${recipe.focus}. ${focusAdjustment.note}`, day: index + 1, label, storageNote, equipmentNote: recipeEquipmentNote }; });
+  const makeMeal = (recipe: Omit<MealDay, "day" | "label" | "storageNote" | "equipmentNote">, day: number, label: string) => { const focus = focusMealDetails(profile.goal, applyServingPreference(recipe.ingredients, profile.servingSize)); return { ...recipe, title: `${focus.titlePrefix}${recipe.title}`, ingredients: focus.ingredients, focus: `${recipe.focus}. ${focus.note}`, day, label, storageNote, equipmentNote: recipeEquipmentNote }; };
+  const mealPlan = labels.map((label, index) => makeMeal(usableRecipes.length ? usableRecipes[index % usableRecipes.length] : rotationRecipes[0], index + 1, label));
+  const breakfastCandidates = breakfastRecipes.filter((recipe) => !excluded.some((item) => `${recipe.title} ${recipe.ingredients.join(" ")}`.toLowerCase().includes(item)));
+  const breakfastPlantBased = breakfastCandidates.filter((recipe) => !/(egg|yoghurt|milk)/i.test(`${recipe.title} ${recipe.ingredients.join(" ")}`));
+  const usableBreakfasts = usesAnimalFoods ? breakfastCandidates : breakfastPlantBased.length ? breakfastPlantBased : breakfastCandidates;
+  const breakfastMeals = labels.map((label, index) => makeMeal(usableBreakfasts.length ? usableBreakfasts[index % usableBreakfasts.length] : breakfastRecipes[5], index + 1, label));
   const sweetToothSnack = profile.sweetToothPreference === "healthier_swaps" ? "Fruit with plain yoghurt or a small homemade cocoa-oat snack" : profile.sweetToothPreference === "portion_guidance" ? "A small chosen sweet portion served after a balanced meal, rather than eating from the packet" : "A small cup of pap, yoghurt, or another snack that fits your dietary notes";
   const snackIdeas = [`${fruit} with a small handful of groundnuts if suitable for you`, "Cucumber, carrot, or another crunchy vegetable with a familiar dip", sweetToothSnack];
-  const slotLabels = profile.mealFrequency === "one_plus_snack" ? ["Main meal"] : profile.mealFrequency === "two" ? ["First meal", "Second meal"] : ["Breakfast", "Lunch", "Dinner"];
+  const slotLabels = profile.mealFrequency === "one_plus_snack" ? ["Main meal"] : profile.mealFrequency === "two" ? ["Breakfast", "Dinner"] : ["Breakfast", "Lunch", "Dinner"];
   const dailyMeals = labels.map((label, index) => ({
     day: index + 1,
     label,
-    slots: slotLabels.map((slot, slotIndex) => ({ label: slot, meal: { ...mealPlan[(index + slotIndex) % mealPlan.length], day: index + 1, label } })),
+    slots: slotLabels.map((slot, slotIndex) => ({ label: slot, meal: slot === "Breakfast" ? { ...breakfastMeals[index], day: index + 1, label } : { ...mealPlan[(index + (slot === "Dinner" ? 2 : slotIndex)) % mealPlan.length], day: index + 1, label } })),
     snackIdeas: profile.mealFrequency === "one_plus_snack" ? [snackIdeas[index % 2], snackIdeas[2]] : [],
   }));
 
@@ -410,15 +465,17 @@ export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
 
   const longerShopping = profile.shoppingFrequency === "biweekly" || profile.shoppingFrequency === "monthly";
   return {
+    rotationLabel: `Week ${profile.rotationWeek} of your two-week rotation`,
     goalTitle: goal.title,
     goalMessage: goal.message,
     safetyNote: "RootedFit is a general wellness guide. If you are pregnant, managing a medical condition, returning after injury, or experience pain, adapt the plan and consider local professional guidance.",
     electricityNote: `${profile.electricityHoursPerDay || "Your stated"} hours of electricity/day: ${storageNote}`,
     meals: mealPlan,
+    breakfastMeals,
     dailyMeals,
     workouts: workoutPlan,
     shoppingGroups: [
-      { title: "Ingredients from your planned recipes", items: Array.from(new Set(mealPlan.flatMap((meal) => meal.ingredients))).slice(0, 42) },
+      { title: "Ingredients from your planned recipes", items: Array.from(new Set(dailyMeals.flatMap((day) => day.slots.flatMap((slot) => slot.meal.ingredients)))).slice(0, 52) },
       { title: "Helpful fresh extras", items: [...localIngredients.slice(0, 6), profile.favoriteFruits[0] ? profile.favoriteFruits[0] : "A fruit you enjoy"] },
       { title: "Storage reminder", items: [longerShopping ? "Choose only quantities you can safely store until your next shop." : "Choose quantities you can use while fresh."] },
     ],

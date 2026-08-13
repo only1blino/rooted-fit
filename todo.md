@@ -62,3 +62,9 @@
 - [x] Refactor Rooted Week into linked meal and workout summaries without duplicated detailed recipes
 - [x] Place Workouts before Extras in the tab order
 - [x] Add tests and documentation for targets, focus-aware plans, recipe-derived groceries, and linked summaries
+- [x] Add editable serving-size preferences that scale recipe ingredients and grocery quantities locally
+- [x] Add a selectable two-week recipe rotation with distinct daily meals
+- [x] Add export and share actions for the weekly grocery list with appropriate native and web fallbacks
+- [x] Redesign breakfast slots as lighter, protein-forward, quick-preparation meals for two- and three-meal schedules
+- [x] Make weight-loss and weight-gain meal titles, ingredients, portions, and snack support visibly distinct
+- [x] Add and run deterministic tests for serving scaling, two-week rotation, breakfast rules, focus contrast, and grocery export text
