@@ -40,3 +40,11 @@
 - [x] Add a strict 10-minute zero-equipment Busy Parent circuit with a visible timer
 - [x] Add a desk-fitness module with 2-minute stretch sequences and configurable local reminders
 - [x] Add tests and documentation for meal-frequency and micro-movement features
+- [x] Separate ready-made meal suggestions from searchable raw ingredient suggestions in onboarding
+- [x] Move ingredient suggestions into the “ingredients within reach” area and create a distinct capped favourite-fruit section
+- [x] Add sweet-tooth preferences with healthier alternatives and portion-guidance options
+- [x] Ensure one, two, and three meal selections always display the corresponding daily meal slots in Rooted Week
+- [x] Convert Meals into the full recipe library and link to it from the Rooted Week meal summary
+- [x] Build a separate goal-specific home-workout library informed by researched external workout resources
+- [x] Rename Move to Extras while retaining timer and desk-break tools
+- [x] Add tests and document the food taxonomy, recipe navigation, and goal-specific workout content policy

@@ -3,12 +3,22 @@ export type FoodCountry = "Nigeria" | "Ghana" | "Kenya" | "South Africa" | "Unit
 export const COUNTRY_OPTIONS: FoodCountry[] = ["Nigeria", "Ghana", "Kenya", "South Africa", "United Kingdom", "United States", "Other"];
 
 const NIGERIA_FOODS = [
-  "Yam", "Cassava", "Garri", "Eba", "Amala", "Pounded yam", "Fufu", "Plantain", "Sweet potato", "Cocoyam",
-  "Ofada rice", "Parboiled rice", "Millet", "Sorghum", "Maize", "Oats", "Brown beans", "Black-eyed beans", "Akara", "Moi moi",
-  "Groundnuts", "Chicken", "Eggs", "Catfish", "Tilapia", "Mackerel", "Smoked fish", "Crayfish", "Lean beef", "Goat meat",
-  "Ugu", "Efo or shoko", "Waterleaf", "Bitterleaf", "Okra", "Garden eggs", "Tomato", "Onion", "Bell pepper", "Scotch bonnet",
-  "Cabbage", "Carrot", "Cucumber", "Orange", "Banana", "Pineapple", "Pawpaw", "Watermelon", "Mango", "Avocado",
+  "Yam", "Cassava", "Garri", "Plantain", "Sweet potato", "Cocoyam", "Ofada rice", "Parboiled rice", "Millet", "Sorghum",
+  "Maize", "Oats", "Brown beans", "Black-eyed beans", "Bambara beans", "Groundnuts", "Tiger nuts", "Chicken", "Eggs", "Catfish",
+  "Tilapia", "Mackerel", "Smoked fish", "Crayfish", "Lean beef", "Goat meat", "Ugu", "Efo or shoko", "Waterleaf", "Bitterleaf",
+  "Okra", "Garden eggs", "Tomato", "Onion", "Bell pepper", "Scotch bonnet", "Cabbage", "Carrot", "Cucumber", "Green beans",
+  "Spinach", "Pumpkin leaves", "Scent leaf", "Ginger", "Garlic", "Palm oil", "Groundnut oil", "Tomato paste", "Locust beans", "Pepper soup spice",
 ];
+
+const MEAL_SUGGESTIONS: Record<FoodCountry, string[]> = {
+  Nigeria: ["Jollof rice", "Beans porridge", "Yam and egg sauce", "Efo riro", "Moi moi", "Akara and pap", "Pepper soup", "Amala and ewedu", "Eba and soup", "Pounded yam and soup", "Ofada rice and stew", "Plantain and beans"],
+  Ghana: ["Waakye", "Jollof rice", "Banku and soup", "Kenkey and fish", "Red red", "Fufu and light soup"],
+  Kenya: ["Githeri", "Ugali and sukuma wiki", "Pilau", "Chapati and beans", "Rice and stew"],
+  "South Africa": ["Pap and chakalaka", "Samp and beans", "Moroho and pap", "Pilchards and rice"],
+  "United Kingdom": ["Jacket potato and beans", "Porridge", "Pasta and tomato sauce", "Chicken and vegetables"],
+  "United States": ["Oatmeal", "Beans and rice", "Chicken and vegetables", "Vegetable pasta"],
+  Other: ["Rice and beans", "Vegetable stew", "Porridge", "Soup and a staple"],
+};
 
 const GHANA_FOODS = [
   "Plantain", "Cocoyam", "Cassava", "Banku", "Kenkey", "Fufu", "Tuo zaafi", "Jollof rice", "Waakye", "Rice balls",
@@ -84,4 +94,8 @@ export function suggestedFoods(country: FoodCountry) {
 
 export function suggestedFruits(country: FoodCountry) {
   return FRUITS[country];
+}
+
+export function suggestedMeals(country: FoodCountry) {
+  return MEAL_SUGGESTIONS[country];
 }

@@ -15,7 +15,7 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
 }));
 
 import { buildWeeklyPlan, loadCheckIns, loadMeasurements, loadProfile, loadProgressPhotos, numberOrNull, saveCheckIns, saveMeasurements, saveProfile, saveProgressPhotos, splitList, type UserProfile } from "../lib/rootedfit-profile";
-import { suggestedFoods, suggestedFruits } from "../lib/food-catalogue";
+import { suggestedFoods, suggestedFruits, suggestedMeals } from "../lib/food-catalogue";
 
 const microwaveProfile: UserProfile = {
   city: "Lagos",
@@ -32,6 +32,7 @@ const microwaveProfile: UserProfile = {
   dietaryRestrictions: [],
   dislikedFoods: [],
   mealFrequency: "three",
+  sweetToothPreference: "none",
   dailyStepCount: 3500,
   workoutMinutesPerDay: 20,
   workoutResources: ["Yoga mat", "Safe floor space"],
@@ -65,10 +66,11 @@ describe("RootedFit weekly plan builder", () => {
   });
 
   it("maps one meal plus snacks into a practical daily schedule", () => {
-    const plan = buildWeeklyPlan({ ...microwaveProfile, mealFrequency: "one_plus_snack" });
+    const plan = buildWeeklyPlan({ ...microwaveProfile, mealFrequency: "one_plus_snack", sweetToothPreference: "portion_guidance" });
 
     expect(plan.dailyMeals[0].slots).toHaveLength(1);
     expect(plan.dailyMeals[0].snackIdeas).toHaveLength(2);
+    expect(plan.dailyMeals[0].snackIdeas.join(" ")).toContain("small chosen sweet portion");
   });
 
   it("keeps comma-separated field input stable and parses decimal number entries", () => {
@@ -81,6 +83,8 @@ describe("RootedFit weekly plan builder", () => {
 
     expect(suggestedFoods("Nigeria")).toHaveLength(50);
     expect(suggestedFruits("Nigeria")).toContain("Mango");
+    expect(suggestedFoods("Nigeria")).not.toContain("Moi moi");
+    expect(suggestedMeals("Nigeria")).toContain("Moi moi");
     expect(JSON.stringify(plan.meals).toLowerCase()).not.toContain("eggs");
     expect(plan.meals[0].ingredients[0]).toMatch(/^¾ cup parboiled rice/);
   });

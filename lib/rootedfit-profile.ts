@@ -3,6 +3,7 @@ import type { FoodCountry } from "@/lib/food-catalogue";
 
 export type ShoppingFrequency = "daily" | "weekly" | "biweekly" | "monthly";
 export type MealFrequency = "one_plus_snack" | "two" | "three";
+export type SweetToothPreference = "none" | "healthier_swaps" | "portion_guidance";
 export type WellnessGoal = "consistency" | "energy" | "toning" | "core_mobility" | "body_composition" | "weight_loss" | "weight_gain" | null;
 export type MeasurementUnit = "ft_in_kg" | "cm_lb";
 export type ProgressPhotoAngle = "front" | "side" | "back";
@@ -22,6 +23,7 @@ export type UserProfile = {
   dietaryRestrictions: string[];
   dislikedFoods: string[];
   mealFrequency: MealFrequency;
+  sweetToothPreference: SweetToothPreference;
   dailyStepCount: number;
   workoutMinutesPerDay: number;
   workoutResources: string[];
@@ -129,6 +131,7 @@ export const emptyProfile: UserProfile = {
   dietaryRestrictions: [],
   dislikedFoods: [],
   mealFrequency: "three",
+  sweetToothPreference: "none",
   dailyStepCount: 0,
   workoutMinutesPerDay: 0,
   workoutResources: [],
@@ -326,13 +329,14 @@ export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
   const plantBasedRecipes = restrictionSafeRecipes.filter((recipe) => !/(chicken|fish|egg|catfish)/i.test(`${recipe.title} ${recipe.ingredients.join(" ")}`));
   const usableRecipes = usesAnimalFoods ? restrictionSafeRecipes : plantBasedRecipes.length ? plantBasedRecipes : restrictionSafeRecipes;
   const mealPlan = labels.map((label, index) => ({ ...(usableRecipes.length ? usableRecipes[index % usableRecipes.length] : nigeriaRecipes[0]), day: index + 1, label, storageNote, equipmentNote: recipeEquipmentNote }));
-  const snackIdeas = [`${fruit} with a small handful of groundnuts if suitable for you`, "Cucumber, carrot, or another crunchy vegetable with a familiar dip", "A small cup of pap, yoghurt, or another snack that fits your dietary notes"];
+  const sweetToothSnack = profile.sweetToothPreference === "healthier_swaps" ? "Fruit with plain yoghurt or a small homemade cocoa-oat snack" : profile.sweetToothPreference === "portion_guidance" ? "A small chosen sweet portion served after a balanced meal, rather than eating from the packet" : "A small cup of pap, yoghurt, or another snack that fits your dietary notes";
+  const snackIdeas = [`${fruit} with a small handful of groundnuts if suitable for you`, "Cucumber, carrot, or another crunchy vegetable with a familiar dip", sweetToothSnack];
   const slotLabels = profile.mealFrequency === "one_plus_snack" ? ["Main meal"] : profile.mealFrequency === "two" ? ["First meal", "Second meal"] : ["Breakfast", "Lunch", "Dinner"];
   const dailyMeals = labels.map((label, index) => ({
     day: index + 1,
     label,
     slots: slotLabels.map((slot, slotIndex) => ({ label: slot, meal: { ...mealPlan[(index + slotIndex) % mealPlan.length], day: index + 1, label } })),
-    snackIdeas: profile.mealFrequency === "one_plus_snack" ? [snackIdeas[index % snackIdeas.length], snackIdeas[(index + 1) % snackIdeas.length]] : [],
+    snackIdeas: profile.mealFrequency === "one_plus_snack" ? [snackIdeas[index % 2], snackIdeas[2]] : [],
   }));
 
   const rounds = durationMinutes >= 30 ? 3 : 2;

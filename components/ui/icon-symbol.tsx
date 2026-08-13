@@ -18,6 +18,7 @@ const MAPPING = {
   "chart.bar.fill": "insert-chart",
   "fork.knife": "restaurant",
   "figure.run": "directions-run",
+  "dumbbell.fill": "fitness-center",
   "paperplane.fill": "send",
   "chevron.left.forwardslash.chevron.right": "code",
   "chevron.right": "chevron-right",
