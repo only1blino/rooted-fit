@@ -215,6 +215,22 @@ describe("RootedFit weekly plan builder", () => {
     expect(beginner.workouts[3].instructorOptions.map((option) => option.kind)).toEqual(["woman", "man"]);
   });
 
+  it("turns selected home resources into distinct movements, session names, and streaming availability", () => {
+    const bodyweightPlan = buildWeeklyPlan({ ...microwaveProfile, workoutResources: [], otherWorkoutResources: [] });
+    const equippedPlan = buildWeeklyPlan({ ...microwaveProfile, workoutResources: ["Yoga mat", "Chair", "Resistance band", "Weights or filled bottles", "Stairs or a sturdy step", "Skipping rope", "Internet for video workouts", "Outdoor walking route"], otherWorkoutResources: [] });
+    const backpackPlan = buildWeeklyPlan({ ...microwaveProfile, workoutResources: [], otherWorkoutResources: ["backpack"] });
+
+    expect(bodyweightPlan.workouts[0].title).toContain("Bodyweight strength");
+    expect(bodyweightPlan.workouts[0].resourcesUsed).toEqual(["No equipment"]);
+    expect(bodyweightPlan.workouts[0].videoAvailable).toBe(false);
+    expect(equippedPlan.workouts[0].title).toContain("Loaded home strength");
+    expect(equippedPlan.workouts[0].instructions.join(" ")).toContain("bottle-loaded squats");
+    expect(equippedPlan.workouts[2].title).toContain("Outdoor walking rhythm");
+    expect(equippedPlan.workouts[4].resourcesUsed).toContain("Weights, filled bottles, or backpack");
+    expect(equippedPlan.workouts[0].videoAvailable).toBe(true);
+    expect(backpackPlan.workouts[0].title).toContain("Loaded home strength");
+  });
+
   it("finds a similar available recipe and organizes the unchanged grocery ingredients by supermarket section", () => {
     const plan = buildWeeklyPlan(microwaveProfile);
     const replacement = findSimilarRecipe(plan, plan.meals[0].sourceTitle ?? "", false);

@@ -118,4 +118,5 @@
 - [x] Add a manual man-led or woman-led instructor toggle for every workout day
 - [x] Assign distinct follow-along video resources for beginner, intermediate, and advanced levels
 - [x] Add regression coverage for retained day selection, instructor toggles, and level-specific video changes
-- [ ] Validate, publish, and push the corrected workout controls to web, Expo, and GitHub
+- [x] Validate, publish, and push the corrected workout controls to web, Expo, and GitHub
+- [x] Make workout recommendations, substitutions, and follow-along options respond to the user’s available home resources

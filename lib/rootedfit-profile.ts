@@ -68,6 +68,9 @@ export type WorkoutDay = {
   durationMinutes: number;
   instructions: string[];
   adaptation: string;
+  resourcesUsed: string[];
+  resourceRationale: string;
+  videoAvailable: boolean;
   videoTitle: string;
   videoUrl: string;
   videoProvider: string;
@@ -323,6 +326,36 @@ export function practicalGroceryItems(recipeIngredients: string[]) {
   return Array.from(new Set(mapped.filter(Boolean)));
 }
 
+type WorkoutTemplate = Omit<WorkoutDay, "day" | "label" | "durationMinutes" | "adaptation" | "difficulty" | "instructorOptions" | "resourceRationale" | "videoAvailable">;
+
+type HomeWorkoutResources = {
+  hasMat: boolean;
+  hasChair: boolean;
+  hasBand: boolean;
+  hasWeights: boolean;
+  hasStairs: boolean;
+  hasRope: boolean;
+  hasOutdoorRoute: boolean;
+  hasFloorSpace: boolean;
+  canStream: boolean;
+};
+
+function workoutResourceFlags(profile: UserProfile): HomeWorkoutResources {
+  const selected = profile.workoutResources;
+  const notes = profile.otherWorkoutResources.join(" ").toLowerCase();
+  return {
+    hasMat: selected.includes("Yoga mat") || /mat|rug|towel/.test(notes),
+    hasChair: selected.includes("Chair") || /chair|bench|stool/.test(notes),
+    hasBand: selected.includes("Resistance band") || /resistance band|loop band|elastic band/.test(notes),
+    hasWeights: selected.includes("Weights or filled bottles") || /weight|dumbbell|kettlebell|filled bottle|water bottle|backpack|water jug/.test(notes),
+    hasStairs: selected.includes("Stairs or a sturdy step") || /stairs|stair|step/.test(notes),
+    hasRope: selected.includes("Skipping rope") || /skipping rope|jump rope/.test(notes),
+    hasOutdoorRoute: selected.includes("Outdoor walking route") || /outdoor|park|walk route|walking route/.test(notes),
+    hasFloorSpace: selected.includes("Safe floor space") || /floor space|clear space/.test(notes),
+    canStream: selected.includes("Internet for video workouts"),
+  };
+}
+
 function movementAdaptation(profile: UserProfile) {
   const parts: string[] = [];
   if (profile.workoutResources.includes("Yoga mat")) parts.push("Use your mat for floor work.");
@@ -330,6 +363,80 @@ function movementAdaptation(profile: UserProfile) {
   if (profile.workoutResources.includes("Resistance band")) parts.push("Add a band only where it feels controlled.");
   if (profile.workoutResources.includes("Weights or filled bottles")) parts.push("Filled bottles can add a light load.");
   return parts.length ? parts.join(" ") : "Bodyweight and a small clear space are enough for this session.";
+}
+
+function resourceRationale(profile: UserProfile, resources: HomeWorkoutResources) {
+  const matched = [
+    resources.hasMat && "Yoga mat or soft floor surface",
+    resources.hasChair && "Chair support",
+    resources.hasBand && "Resistance band",
+    resources.hasWeights && "Weights, filled bottles, or a backpack",
+    resources.hasStairs && "Stairs or a sturdy step",
+    resources.hasRope && "Skipping rope",
+    resources.hasOutdoorRoute && "Outdoor walking route",
+  ].filter(Boolean) as string[];
+  const otherResources = profile.otherWorkoutResources.length ? ` You also noted ${sentenceList(profile.otherWorkoutResources, "other home resources")}.` : "";
+  return matched.length ? `Your selected setup changes the movement choices through ${sentenceList(matched, "your available resources")}.${otherResources}` : `No dedicated equipment was selected, so this week uses bodyweight movements and a small clear space.${otherResources}`;
+}
+
+function buildResourceAwareWorkoutTemplates(profile: UserProfile, rounds: number): WorkoutTemplate[] {
+  const resources = workoutResourceFlags(profile);
+  const strength = resources.hasWeights
+    ? { title: "Loaded home strength: bottle or backpack foundation", category: "Strength with home load", resourcesUsed: ["Weights, filled bottles, or backpack"], instructions: [`Warm up for 3 minutes: march in place, shoulder rolls, and hip circles.`, `Complete ${rounds} controlled rounds: 10 bottle-loaded squats, 8 bent-over bottle rows per side, 8 standing bottle presses, and 12 calf raises.`, "Set the load down between sets and finish with 2 minutes of relaxed stretching."] }
+    : resources.hasBand
+      ? { title: "Resistance-band strength: full-body foundation", category: "Strength with band", resourcesUsed: ["Resistance band"], instructions: ["Warm up for 3 minutes: march in place, shoulder rolls, and hip circles.", `Complete ${rounds} controlled rounds: 10 banded squats, 10 standing-on-band rows, 8 standing-on-band presses, and 12 calf raises.`, "Inspect the band first, move slowly, and never release it while it is under tension."] }
+      : resources.hasChair
+        ? { title: "Chair-supported strength: full-body foundation", category: "Supported strength", resourcesUsed: ["Chair"], instructions: ["Use a solid, stable, non-wheeled chair on a surface where it will not slide.", `Complete ${rounds} controlled rounds: 10 chair sit-to-stands, 8 chair incline presses, 10 hip hinges, and 12 calf raises using the chair for support.`, "Rest for 45–60 seconds between rounds and finish with 2 minutes of relaxed stretching."] }
+        : { title: "Bodyweight strength: full-body foundation", category: "Strength & toning", resourcesUsed: ["No equipment"], instructions: ["Warm up for 3 minutes: march in place, shoulder rolls, and hip circles.", `Complete ${rounds} rounds: 10 bodyweight squats, 8 wall or floor push-ups, 10 hip hinges, and 12 calf raises.`, "Rest for 45–60 seconds between rounds and finish with 2 minutes of relaxed stretching."] };
+  const core = resources.hasMat
+    ? { title: "Mat-based core: control block", category: "Core on the mat", resourcesUsed: ["Yoga mat or soft floor surface"], instructions: ["Spend 3 minutes on slow breathing, pelvic tilts, and gentle spinal mobility on your mat.", `Complete ${rounds} rounds: 8 heel taps per side, 8 dead-bug reaches per side, and a 20-second supported tabletop hold.`, "Finish with 6 slow cat-cow movements and a side-body stretch."] }
+    : resources.hasChair
+      ? { title: "Chair-based core: upright control block", category: "Seated core & posture", resourcesUsed: ["Chair"], instructions: ["Sit tall on a solid, stable chair and spend 3 minutes on slow breathing and shoulder rolls.", `Complete ${rounds} rounds: 8 seated knee lifts per side, 8 seated cross-body reaches per side, and a 20-second tall seated brace.`, "Finish with 6 slow seated spinal rolls and a side-body stretch."] }
+      : { title: "Standing core: small-space control block", category: "Core & control", resourcesUsed: ["No equipment"], instructions: ["Spend 3 minutes on slow breathing, standing pelvic tilts, and gentle spinal mobility.", `Complete ${rounds} rounds: 8 standing knee drives per side, 8 slow cross-body reaches per side, and a 20-second tall standing brace.`, "Finish with 6 slow spinal rolls and a side-body stretch."] };
+  const cardio = resources.hasOutdoorRoute
+    ? { title: "Outdoor walking rhythm: step builder", category: "Outdoor steps & stamina", resourcesUsed: ["Outdoor walking route"], instructions: ["Start with 3 minutes at an easy outdoor walking pace.", `Alternate 2 minutes steady walking with 1 minute brisk walking for ${Math.max(4, Math.floor(profile.workoutMinutesPerDay / 3))} cycles.`, "Cool down for 3 minutes and stretch calves and ankles gently."] }
+    : resources.hasRope
+      ? { title: "Skipping-rope rhythm: cardio builder", category: "Rope cardio", resourcesUsed: ["Skipping rope"], instructions: ["Warm up with 3 minutes of easy marching, step touches, and ankle circles.", `Alternate 30 seconds easy rope skips or rope turns with 30 seconds marching for ${Math.max(6, Math.floor(profile.workoutMinutesPerDay / 2))} cycles.`, "Finish with slow breathing and gentle calf stretches."] }
+      : resources.hasStairs
+        ? { title: "Stair-step rhythm: cardio builder", category: "Steps & stamina", resourcesUsed: ["Stairs or a sturdy step"], instructions: ["Start with 3 minutes of easy marching beside the lowest sturdy step.", `Alternate 45 seconds controlled step-ups with 45 seconds easy marching for ${Math.max(5, Math.floor(profile.workoutMinutesPerDay / 2))} cycles.`, "Use a handrail if available, stay at a steady pace, and cool down with ankle stretches."] }
+        : { title: "Small-space rhythm: indoor cardio builder", category: "Steps & stamina", resourcesUsed: ["Safe floor space"], instructions: ["Start with 3 minutes at an easy marching pace in a clear space.", `Alternate 2 minutes steady marching with 1 minute brisk higher-knee marching for ${Math.max(4, Math.floor(profile.workoutMinutesPerDay / 3))} cycles.`, "Cool down for 3 minutes and stretch calves and ankles gently."] };
+  const mobility = resources.hasMat
+    ? { title: "Mat mobility reset: hips, back, shoulders", category: "Floor mobility & posture", resourcesUsed: ["Yoga mat or soft floor surface"], instructions: ["Use your mat for 6 shoulder rolls, 6 neck turns, and 8 ankle circles per side.", `Complete ${rounds} slow rounds: 8 cat-cow movements, 8 hip openers per side, and 8 prone or kneeling arm reaches.`, "Finish with 60 seconds of comfortable breathing and a supported forward fold."] }
+    : resources.hasChair
+      ? { title: "Chair mobility reset: hips, back, shoulders", category: "Supported mobility", resourcesUsed: ["Chair"], instructions: ["Use a stable chair for 6 shoulder rolls, 6 neck turns, and 8 ankle circles per side.", `Complete ${rounds} slow rounds: 8 chair-supported squats, 8 seated hip openers per side, and 8 seated wall or chair slides.`, "Finish with 60 seconds of comfortable breathing and a seated forward fold."] }
+      : { title: "Standing mobility reset: hips, back, shoulders", category: "Mobility & posture", resourcesUsed: ["No equipment"], instructions: ["Move through 6 shoulder rolls, 6 neck turns, and 8 ankle circles per side.", `Complete ${rounds} slow rounds: 8 supported squats, 8 standing hip openers per side, and 8 wall slides.`, "Finish with 60 seconds of comfortable breathing and a supported forward fold."] };
+  const lowerBody = resources.hasWeights
+    ? { title: "Loaded lower-body and balance block", category: "Strength with home load", resourcesUsed: ["Weights, filled bottles, or backpack"], instructions: ["Warm up near a stable chair or wall for support.", `Complete ${rounds} rounds: 10 loaded squats, 8 loaded reverse lunges per side, 10 loaded hip hinges, and 10 calf raises.`, "Finish with one 20-second supported single-leg balance per side, only if it feels steady."] }
+    : resources.hasBand
+      ? { title: "Banded lower-body and balance block", category: "Strength with band", resourcesUsed: ["Resistance band"], instructions: ["Warm up near a stable chair or wall for support.", `Complete ${rounds} rounds: 10 banded squats, 10 banded side steps per side, 10 banded hip hinges, and 10 calf raises.`, "Inspect the band first and finish with one 20-second supported single-leg balance per side if it feels steady."] }
+      : resources.hasStairs
+        ? { title: "Step-based lower-body and balance block", category: "Step strength & balance", resourcesUsed: ["Stairs or a sturdy step"], instructions: ["Warm up beside the lowest sturdy step, using a rail if available.", `Complete ${rounds} rounds: 8 controlled step-ups per side, 10 side steps per side, 10 standing hip extensions, and 10 calf raises.`, "Finish with one 20-second supported single-leg balance per side, only if it feels steady."] }
+        : resources.hasChair
+          ? { title: "Chair-supported lower-body and balance block", category: "Supported strength & balance", resourcesUsed: ["Chair"], instructions: ["Warm up beside a solid, stable chair for support.", `Complete ${rounds} rounds: 10 sit-to-stands, 10 side steps per side, 10 standing hip extensions, and 10 calf raises with chair support.`, "Finish with one 20-second supported single-leg balance per side, only if it feels steady."] }
+          : { title: "Bodyweight lower-body and balance block", category: "Strength & balance", resourcesUsed: ["No equipment"], instructions: ["Warm up near a wall for support if useful.", `Complete ${rounds} rounds: 10 bodyweight squats, 10 side steps per side, 10 standing hip extensions, and 10 calf raises.`, "Finish with one 20-second supported single-leg balance per side, only if it feels steady."] };
+  const variety = resources.hasRope
+    ? { title: "Rope interval mix: short cardio circuit", category: "Rope cardio", resourcesUsed: ["Skipping rope"], instructions: ["Use 3 minutes of easy rope turns, marching, and step touches to warm up.", `Complete ${rounds} rounds: 30 seconds easy rope skips or turns, 30 seconds shadow boxing, 30 seconds step touches, then 30 seconds easy recovery.`, "Finish with 2 minutes of slow breathing and shoulder/leg stretches."] }
+    : resources.hasStairs
+      ? { title: "Step interval mix: short cardio circuit", category: "Step cardio", resourcesUsed: ["Stairs or a sturdy step"], instructions: ["Use 3 minutes of easy marching and step touches to warm up.", `Complete ${rounds} rounds: 30 seconds controlled step-ups, 30 seconds shadow boxing, 30 seconds step touches, then 30 seconds easy recovery.`, "Finish with 2 minutes of slow breathing and shoulder/leg stretches."] }
+      : resources.hasBand
+        ? { title: "Resistance-band mix: full-body circuit", category: "Strength with band", resourcesUsed: ["Resistance band"], instructions: ["Use 3 minutes of easy marching and shoulder rolls to warm up.", `Complete ${rounds} rounds: 10 band rows, 10 band squats, 8 band presses, then 30 seconds easy recovery.`, "Move slowly, inspect the band before use, and finish with 2 minutes of relaxed stretching."] }
+        : { title: "Small-space cardio: no-equipment mix", category: "Movement variety", resourcesUsed: [resources.hasFloorSpace ? "Safe floor space" : "No equipment"], instructions: ["Use 3 minutes of easy marching and step touches to warm up.", `Complete ${rounds} rounds: 45 seconds marching, 45 seconds step touches, 45 seconds shadow boxing, then 45 seconds easy recovery.`, "Finish with 2 minutes of slow breathing and shoulder/leg stretches."] };
+  const recovery = resources.hasMat
+    ? { title: "Mat recovery flow: restore and reset", category: "Recovery on the mat", resourcesUsed: ["Yoga mat or soft floor surface"], instructions: ["Choose your mat or a soft floor surface and take 6 slow breaths.", "Move gently through 8 cat-cow movements, 8 hip circles per side, and 30 seconds of a comfortable child’s pose.", "Finish with one sentence about what made movement possible today; no performance target is needed."] }
+    : resources.hasChair
+      ? { title: "Chair recovery flow: restore and reset", category: "Seated recovery & mobility", resourcesUsed: ["Chair"], instructions: ["Sit tall on a stable chair and take 6 slow breaths.", "Move gently through 8 seated spinal rolls, 8 seated hip circles per side, and 30 seconds of a comfortable chair fold.", "Finish with one sentence about what made movement possible today; no performance target is needed."] }
+      : { title: "Standing recovery flow: restore and reset", category: "Recovery & mobility", resourcesUsed: ["No equipment"], instructions: ["Choose a calm space and take 6 slow breaths.", "Move gently through 8 standing spinal rolls, 8 hip circles per side, and 30 seconds of a comfortable forward fold.", "Finish with one sentence about what made movement possible today; no performance target is needed."] };
+
+  const videoDetails = [
+    ["30 MIN FULL BODY WORKOUT · At-Home Pilates", "https://www.youtube.com/watch?v=lBCBSy9cNT0", "Move With Nicole"],
+    ["30 MIN PILATES CORE WORKOUT · At-Home Pilates Abs", "https://www.youtube.com/watch?v=U5LwQW_IQOc", "Move With Nicole"],
+    ["30-Minute Yoga For Beginners", "https://www.youtube.com/watch?v=AB3Y-4a3ZrU", "Yoga With Adriene"],
+    ["30-Minute Yoga For Beginners", "https://www.youtube.com/watch?v=AB3Y-4a3ZrU", "Yoga With Adriene"],
+    ["30 MIN ABS & BOOTY WORKOUT · No Equipment", "https://www.youtube.com/watch?v=MvSK7dBbt8Q", "Move With Nicole"],
+    ["30 MIN ABS & BOOTY · No Equipment", "https://www.youtube.com/watch?v=pKhKqYBP7qQ", "YouTube"],
+    ["30-Minute Yoga For Beginners", "https://www.youtube.com/watch?v=AB3Y-4a3ZrU", "Yoga With Adriene"],
+  ] as const;
+  return [strength, core, cardio, mobility, lowerBody, variety, recovery].map((template, index) => ({ ...template, videoTitle: videoDetails[index][0], videoUrl: videoDetails[index][1], videoProvider: videoDetails[index][2] }));
 }
 
 function difficultyAdaptation(difficulty: WorkoutDifficulty) {
@@ -558,15 +665,7 @@ export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
   }));
 
   const rounds = durationMinutes >= 30 ? 3 : 2;
-  const workoutTemplates: Omit<WorkoutDay, "day" | "label" | "durationMinutes" | "adaptation" | "difficulty" | "instructorOptions">[] = [
-    { title: "Home toning: full-body foundation", category: "Strength & toning", instructions: ["Warm up for 3 minutes: march in place, shoulder rolls, and hip circles.", `Complete ${rounds} rounds: 10 chair sit-to-stands, 8 wall push-ups, 10 hip hinges, and 12 calf raises.`, "Rest for 45–60 seconds between rounds and finish with 2 minutes of relaxed stretching."], videoTitle: "30 MIN FULL BODY WORKOUT · At-Home Pilates", videoUrl: "https://www.youtube.com/watch?v=lBCBSy9cNT0", videoProvider: "Move With Nicole" },
-    { title: "Pilates-inspired core: control block", category: "Core & control", instructions: ["Spend 3 minutes on slow breathing, pelvic tilts, and gentle spinal mobility.", `Complete ${rounds} rounds: 8 heel taps per side, 8 dead-bug reaches per side, and a 20-second supported tabletop hold.`, "Finish with 6 slow cat-cow movements or seated spinal rolls and a side-body stretch."], videoTitle: "30 MIN PILATES CORE WORKOUT · At-Home Pilates Abs", videoUrl: "https://www.youtube.com/watch?v=U5LwQW_IQOc", videoProvider: "Move With Nicole" },
-    { title: "Walking rhythm: step builder", category: "Steps & stamina", instructions: ["Start with 3 minutes at an easy walking or marching pace.", `Alternate 2 minutes steady walking with 1 minute brisk walking or higher-knee marching for ${Math.max(4, Math.floor(durationMinutes / 3))} cycles.`, "Cool down for 3 minutes and stretch calves and ankles gently."], videoTitle: "30-Minute Yoga For Beginners", videoUrl: "https://www.youtube.com/watch?v=AB3Y-4a3ZrU", videoProvider: "Yoga With Adriene" },
-    { title: "Mobility reset: hips, back, shoulders", category: "Mobility & posture", instructions: ["Move through 6 shoulder rolls, 6 neck turns, and 8 ankle circles per side.", `Complete ${rounds} slow rounds: 8 supported squats, 8 standing hip openers per side, and 8 wall slides.`, "Finish with 60 seconds of comfortable breathing and a supported forward fold or chair stretch."], videoTitle: "30-Minute Yoga For Beginners", videoUrl: "https://www.youtube.com/watch?v=AB3Y-4a3ZrU", videoProvider: "Yoga With Adriene" },
-    { title: "Lower-body and balance block", category: "Strength & balance", instructions: ["Warm up near a stable chair or wall for support.", `Complete ${rounds} rounds: 10 sit-to-stands, 10 side steps per side, 10 glute bridges or standing hip extensions, and 10 calf raises.`, "Finish with one 20-second supported single-leg balance per side, only if it feels steady."], videoTitle: "30 MIN ABS & BOOTY WORKOUT · No Equipment", videoUrl: "https://www.youtube.com/watch?v=MvSK7dBbt8Q", videoProvider: "Move With Nicole" },
-    { title: "Small-space cardio: no-equipment mix", category: "Movement variety", instructions: ["Use 3 minutes of easy marching and step touches to warm up.", `Complete ${rounds} rounds: 45 seconds marching, 45 seconds step touches, 45 seconds shadow boxing, then 45 seconds easy recovery.`, "Finish with 2 minutes of slow breathing and shoulder/leg stretches."], videoTitle: "30 MIN ABS & BOOTY · No Equipment", videoUrl: "https://www.youtube.com/watch?v=pKhKqYBP7qQ", videoProvider: "YouTube" },
-    { title: "Recovery flow: restore and reset", category: "Recovery & mobility", instructions: ["Choose a calm space and take 6 slow breaths.", "Move gently through 8 cat-cow or seated spinal rolls, 8 hip circles per side, and 30 seconds of a comfortable child’s pose or chair fold.", "Finish with one sentence about what made movement possible today; no performance target is needed."], videoTitle: "30-Minute Yoga For Beginners", videoUrl: "https://www.youtube.com/watch?v=AB3Y-4a3ZrU", videoProvider: "Yoga With Adriene" },
-  ];
+  const workoutTemplates = buildResourceAwareWorkoutTemplates(profile, rounds);
   const maleInstructorOptions: WorkoutInstructorOption[] = [
     { kind: "man", label: "Man-led option", name: "Joe Wicks", videoTitle: "10 Minute FULL BODY Workout", videoUrl: "https://www.youtube.com/watch?v=KrmYjcQzSsQ", videoProvider: "The Body Coach" },
     { kind: "man", label: "Man-led option", name: "Joe Wicks", videoTitle: "10 Minute Abs Workout", videoUrl: "https://www.youtube.com/watch?v=aWJo_Fe20aE", videoProvider: "The Body Coach" },
@@ -592,6 +691,9 @@ export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
       durationMinutes: Math.max(10, durationMinutes + difficulty.durationAdjustment),
       instructions: [...workoutTemplates[index].instructions, difficulty.instruction],
       adaptation: `${difficulty.label} level. ${movementAdaptation(profile)} Keep the session pain-free; pause or choose a gentler option if anything feels wrong.`,
+      resourcesUsed: workoutTemplates[index].resourcesUsed,
+      resourceRationale: resourceRationale(profile, workoutResourceFlags(profile)),
+      videoAvailable: workoutResourceFlags(profile).canStream,
       difficulty: profile.workoutDifficulty,
       instructorOptions,
       videoTitle: defaultOption.videoTitle,
