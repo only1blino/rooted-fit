@@ -86,3 +86,7 @@
 - [x] Verify react-native-web and react-dom dependencies plus the Expo web export configuration
 - [x] Create and validate the RootedFit production web distribution bundle
 - [x] Save a production-web checkpoint and guide the user to publish it for a live tester URL
+- [x] Add a floating feedback control that is visible across RootedFit browser pages
+- [x] Add a locally remembered welcome guide for first-time web visitors
+- [x] Add a web sharing action that copies the current app link with a browser-safe fallback
+- [x] Validate and checkpoint the browser-tester experience enhancements
