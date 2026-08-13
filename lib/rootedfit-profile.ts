@@ -123,6 +123,7 @@ export type WorkoutSessionState = { workoutId: string; saved: boolean; completed
 export type DailyWaterLog = { date: string; millilitres: number };
 export type GroceryChecklistItem = { key: string; checked: boolean };
 export type LocalExerciseLog = { id: string; workoutId: string; exerciseName: string; setNumber: number; repCount: number; weightUsedKg: number | null; loggedAt: string };
+export type CompletionRating = { completionKey: string; rating: 1 | 2 | 3 | 4 | 5; ratedAt: string };
 
 export const profileStorageKey = "rootedfit.profile.v2";
 const legacyProfileStorageKey = "rootedfit.profile.v1";
@@ -134,6 +135,7 @@ export const workoutSessionsStorageKey = "rootedfit.workout-sessions.v1";
 export const waterLogsStorageKey = "rootedfit.water-logs.v1";
 export const groceryChecklistStorageKey = "rootedfit.grocery-checklist.v1";
 export const exerciseLogsStorageKey = "rootedfit.exercise-logs.v1";
+export const completionRatingsStorageKey = "rootedfit.completion-ratings.v1";
 
 export const emptyProfile: UserProfile = {
   city: "",
@@ -344,7 +346,7 @@ export async function saveProfile(profile: UserProfile) {
 }
 
 export async function clearProfile() {
-  await AsyncStorage.multiRemove([profileStorageKey, legacyProfileStorageKey, checkInsStorageKey, measurementsStorageKey, progressPhotosStorageKey, mealSwapsStorageKey, workoutSessionsStorageKey, waterLogsStorageKey, groceryChecklistStorageKey, exerciseLogsStorageKey]);
+  await AsyncStorage.multiRemove([profileStorageKey, legacyProfileStorageKey, checkInsStorageKey, measurementsStorageKey, progressPhotosStorageKey, mealSwapsStorageKey, workoutSessionsStorageKey, waterLogsStorageKey, groceryChecklistStorageKey, exerciseLogsStorageKey, completionRatingsStorageKey]);
 }
 
 export async function loadCheckIns(): Promise<DailyCheckIn[]> {
@@ -437,6 +439,16 @@ export async function loadExerciseLogs(): Promise<LocalExerciseLog[]> {
 
 export async function saveExerciseLogs(logs: LocalExerciseLog[]) {
   await AsyncStorage.setItem(exerciseLogsStorageKey, JSON.stringify(logs.slice(0, 500)));
+}
+
+export async function loadCompletionRatings(): Promise<CompletionRating[]> {
+  const saved = await AsyncStorage.getItem(completionRatingsStorageKey);
+  if (!saved) return [];
+  try { return JSON.parse(saved) as CompletionRating[]; } catch { return []; }
+}
+
+export async function saveCompletionRatings(ratings: CompletionRating[]) {
+  await AsyncStorage.setItem(completionRatingsStorageKey, JSON.stringify(ratings.slice(0, 180)));
 }
 
 export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {

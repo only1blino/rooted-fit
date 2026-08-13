@@ -30,6 +30,14 @@ export const appRouter = router({
     })).mutation(({ ctx, input }) => db.createExerciseLogForUser({ ...input, userId: ctx.user.id })),
   }),
 
+  testerFeedback: router({
+    submit: publicProcedure.input(z.object({
+      category: z.enum(["bug", "idea", "content", "other"]),
+      message: z.string().trim().min(8).max(2000),
+      pageUrl: z.string().url().max(1024).optional(),
+    })).mutation(({ input }) => db.createTesterFeedback(input)),
+  }),
+
   // TODO: add feature routers here, e.g.
   // todo: router({
   //   list: protectedProcedure.query(({ ctx }) =>

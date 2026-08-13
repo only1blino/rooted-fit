@@ -14,7 +14,7 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
-import { buildWeeklyPlan, categorizeGroceryItems, findSimilarRecipe, formatGroceryChecklistPrintHtml, formatGroceryListExport, loadCheckIns, loadExerciseLogs, loadGroceryChecklist, loadMealSwaps, loadMeasurements, loadProfile, loadProgressPhotos, loadWorkoutSessionStates, numberOrNull, saveCheckIns, saveExerciseLogs, saveGroceryChecklist, saveMealSwaps, saveMeasurements, saveProfile, saveProgressPhotos, saveWorkoutSessionStates, splitList, type UserProfile } from "../lib/rootedfit-profile";
+import { buildWeeklyPlan, categorizeGroceryItems, findSimilarRecipe, formatGroceryChecklistPrintHtml, formatGroceryListExport, loadCheckIns, loadCompletionRatings, loadExerciseLogs, loadGroceryChecklist, loadMealSwaps, loadMeasurements, loadProfile, loadProgressPhotos, loadWorkoutSessionStates, numberOrNull, saveCheckIns, saveCompletionRatings, saveExerciseLogs, saveGroceryChecklist, saveMealSwaps, saveMeasurements, saveProfile, saveProgressPhotos, saveWorkoutSessionStates, splitList, type UserProfile } from "../lib/rootedfit-profile";
 import { suggestedFoods, suggestedFruits, suggestedMeals } from "../lib/food-catalogue";
 
 const microwaveProfile: UserProfile = {
@@ -214,5 +214,13 @@ describe("RootedFit weekly plan builder", () => {
     await saveExerciseLogs(logs);
 
     await expect(loadExerciseLogs()).resolves.toEqual(logs);
+  });
+
+  it("persists optional completion ratings for a daily meal plan or workout", async () => {
+    const ratings = [{ completionKey: "meal:1:1", rating: 4 as const, ratedAt: "2026-08-13T12:00:00.000Z" }, { completionKey: "workout:home-session:2026-08-13", rating: 5 as const, ratedAt: "2026-08-13T12:10:00.000Z" }];
+
+    await saveCompletionRatings(ratings);
+
+    await expect(loadCompletionRatings()).resolves.toEqual(ratings);
   });
 });

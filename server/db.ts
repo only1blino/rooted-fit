@@ -2,6 +2,7 @@ import { desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users } from "../drizzle/schema";
 import { exerciseLogs } from "../drizzle/exercise-logs.schema";
+import { rootedFitTesterFeedback } from "../drizzle/tester-feedback.schema";
 import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -106,6 +107,17 @@ export async function createExerciseLogForUser(input: { userId: number; workoutI
     setNumber: input.setNumber,
     repCount: input.repCount,
     weightUsedKg: input.weightUsedKg === null || input.weightUsedKg === undefined ? null : input.weightUsedKg.toFixed(2),
+  });
+  return { success: true } as const;
+}
+
+export async function createTesterFeedback(input: { category: string; message: string; pageUrl?: string | null }) {
+  const db = await getDb();
+  if (!db) throw new Error("Feedback is temporarily unavailable");
+  await db.insert(rootedFitTesterFeedback).values({
+    category: input.category,
+    message: input.message,
+    pageUrl: input.pageUrl || null,
   });
   return { success: true } as const;
 }

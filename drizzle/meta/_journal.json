@@ -15,6 +15,13 @@
       "when": 1786629275025,
       "tag": "0001_peaceful_silver_sable",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1786633494414,
+      "tag": "0002_ancient_harrier",
+      "breakpoints": true
     }
   ]
 }
