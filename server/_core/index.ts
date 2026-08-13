@@ -71,11 +71,11 @@ async function startServer() {
     }),
   );
 
-  // The deployed web release is an Expo static export in /dist. Keep API and
+  // The deployed web release is an Expo static export in /web-dist. Keep API and
   // OAuth routes above this fallback, then let browser routes resolve to the
   // exported app shell on built-in hosting.
   if (process.env.NODE_ENV === "production") {
-    const webDist = path.resolve(process.cwd(), "dist");
+    const webDist = path.resolve(process.cwd(), "web-dist");
     app.use(express.static(webDist));
     app.get("*", (req, res, next) => {
       if (req.path.startsWith("/api/")) return next();
