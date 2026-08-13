@@ -31,6 +31,7 @@ const microwaveProfile: UserProfile = {
   dietaryNotes: "",
   dietaryRestrictions: [],
   dislikedFoods: [],
+  mealFrequency: "three",
   dailyStepCount: 3500,
   workoutMinutesPerDay: 20,
   workoutResources: ["Yoga mat", "Safe floor space"],
@@ -60,6 +61,14 @@ describe("RootedFit weekly plan builder", () => {
     expect(plan.shoppingGroups[0].items).toContain("Beans, lentils, groundnuts, or another shelf-stable protein");
     expect(plan.workouts[1].videoUrl).toContain("youtube.com");
     expect(plan.workouts[1].videoTitle).toContain("PILATES");
+    expect(plan.dailyMeals[0].slots).toHaveLength(3);
+  });
+
+  it("maps one meal plus snacks into a practical daily schedule", () => {
+    const plan = buildWeeklyPlan({ ...microwaveProfile, mealFrequency: "one_plus_snack" });
+
+    expect(plan.dailyMeals[0].slots).toHaveLength(1);
+    expect(plan.dailyMeals[0].snackIdeas).toHaveLength(2);
   });
 
   it("keeps comma-separated field input stable and parses decimal number entries", () => {

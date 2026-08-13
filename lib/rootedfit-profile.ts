@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { FoodCountry } from "@/lib/food-catalogue";
 
 export type ShoppingFrequency = "daily" | "weekly" | "biweekly" | "monthly";
+export type MealFrequency = "one_plus_snack" | "two" | "three";
 export type WellnessGoal = "consistency" | "energy" | "toning" | "core_mobility" | "body_composition" | "weight_loss" | "weight_gain" | null;
 export type MeasurementUnit = "ft_in_kg" | "cm_lb";
 export type ProgressPhotoAngle = "front" | "side" | "back";
@@ -20,6 +21,7 @@ export type UserProfile = {
   dietaryNotes: string;
   dietaryRestrictions: string[];
   dislikedFoods: string[];
+  mealFrequency: MealFrequency;
   dailyStepCount: number;
   workoutMinutesPerDay: number;
   workoutResources: string[];
@@ -71,6 +73,7 @@ export type WeeklyPlan = {
   safetyNote: string;
   electricityNote: string;
   meals: MealDay[];
+  dailyMeals: { day: number; label: string; slots: { label: string; meal: MealDay }[]; snackIdeas: string[] }[];
   workouts: WorkoutDay[];
   shoppingGroups: ShoppingGroup[];
 };
@@ -125,6 +128,7 @@ export const emptyProfile: UserProfile = {
   dietaryNotes: "",
   dietaryRestrictions: [],
   dislikedFoods: [],
+  mealFrequency: "three",
   dailyStepCount: 0,
   workoutMinutesPerDay: 0,
   workoutResources: [],
@@ -322,6 +326,14 @@ export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
   const plantBasedRecipes = restrictionSafeRecipes.filter((recipe) => !/(chicken|fish|egg|catfish)/i.test(`${recipe.title} ${recipe.ingredients.join(" ")}`));
   const usableRecipes = usesAnimalFoods ? restrictionSafeRecipes : plantBasedRecipes.length ? plantBasedRecipes : restrictionSafeRecipes;
   const mealPlan = labels.map((label, index) => ({ ...(usableRecipes.length ? usableRecipes[index % usableRecipes.length] : nigeriaRecipes[0]), day: index + 1, label, storageNote, equipmentNote: recipeEquipmentNote }));
+  const snackIdeas = [`${fruit} with a small handful of groundnuts if suitable for you`, "Cucumber, carrot, or another crunchy vegetable with a familiar dip", "A small cup of pap, yoghurt, or another snack that fits your dietary notes"];
+  const slotLabels = profile.mealFrequency === "one_plus_snack" ? ["Main meal"] : profile.mealFrequency === "two" ? ["First meal", "Second meal"] : ["Breakfast", "Lunch", "Dinner"];
+  const dailyMeals = labels.map((label, index) => ({
+    day: index + 1,
+    label,
+    slots: slotLabels.map((slot, slotIndex) => ({ label: slot, meal: { ...mealPlan[(index + slotIndex) % mealPlan.length], day: index + 1, label } })),
+    snackIdeas: profile.mealFrequency === "one_plus_snack" ? [snackIdeas[index % snackIdeas.length], snackIdeas[(index + 1) % snackIdeas.length]] : [],
+  }));
 
   const rounds = durationMinutes >= 30 ? 3 : 2;
   const workoutTemplates: Omit<WorkoutDay, "day" | "label" | "durationMinutes" | "adaptation">[] = [
@@ -348,6 +360,7 @@ export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
     safetyNote: "RootedFit is a general wellness guide. If you are pregnant, managing a medical condition, returning after injury, or experience pain, adapt the plan and consider local professional guidance.",
     electricityNote: `${profile.electricityHoursPerDay || "Your stated"} hours of electricity/day: ${storageNote}`,
     meals: mealPlan,
+    dailyMeals,
     workouts: workoutPlan,
     shoppingGroups: [
       { title: "Durable pantry base", items: ["A grain, root, or starchy staple you enjoy", "Beans, lentils, groundnuts, or another shelf-stable protein", "Tinned or dried protein only if locally preferred", "Seasonings you already use"] },

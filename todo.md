@@ -34,3 +34,9 @@
 - [x] Add weight-loss and weight-gain options to primary and secondary focus selection
 - [x] Add curated YouTube links for Pilates, yoga, core, booty, and home-toning workout sessions
 - [x] Validate the revised content against source notes and test the updated plan engine
+- [x] Define evidence-informed constraints for meal frequency, 10-minute bodyweight circuits, and desk-stretch breaks
+- [x] Add onboarding controls for one meal plus snacks, two meals, or three meals per day
+- [x] Generate daily meal schedules that match the selected eating frequency and include optional snack ideas
+- [x] Add a strict 10-minute zero-equipment Busy Parent circuit with a visible timer
+- [x] Add a desk-fitness module with 2-minute stretch sequences and configurable local reminders
+- [x] Add tests and documentation for meal-frequency and micro-movement features

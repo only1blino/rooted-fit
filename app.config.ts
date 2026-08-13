@@ -128,6 +128,12 @@ const config: ExpoConfig = {
         },
       },
     ],
+    [
+      "expo-notifications",
+      {
+        "defaultChannel": "rooted-desk-breaks",
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,
