@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
+import path from "path";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { registerStorageProxy } from "./storageProxy";
@@ -69,6 +70,20 @@ async function startServer() {
       createContext,
     }),
   );
+
+  // The deployed web release is an Expo static export in /dist. Keep API and
+  // OAuth routes above this fallback, then let browser routes resolve to the
+  // exported app shell on built-in hosting.
+  if (process.env.NODE_ENV === "production") {
+    const webDist = path.resolve(process.cwd(), "dist");
+    app.use(express.static(webDist));
+    app.get("*", (req, res, next) => {
+      if (req.path.startsWith("/api/")) return next();
+      res.sendFile(path.join(webDist, "index.html"), (error) => {
+        if (error) next(error);
+      });
+    });
+  }
 
   const preferredPort = parseInt(process.env.PORT || "3000");
   const port = await findAvailablePort(preferredPort);

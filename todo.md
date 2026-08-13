@@ -94,3 +94,4 @@
 - [x] Add a concise “What’s New” section to Extras for recent release notes and bug fixes
 - [x] Add optional local ratings immediately after workout or meal-plan completion
 - [x] Validate the production web bundle and push the tester-feedback release to GitHub
+- [x] Verify the current production bundle, GitHub synchronization, and hosted tester URL after release
