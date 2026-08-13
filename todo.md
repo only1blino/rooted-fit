@@ -68,3 +68,7 @@
 - [x] Redesign breakfast slots as lighter, protein-forward, quick-preparation meals for two- and three-meal schedules
 - [x] Make weight-loss and weight-gain meal titles, ingredients, portions, and snack support visibly distinct
 - [x] Add and run deterministic tests for serving scaling, two-week rotation, breakfast rules, focus contrast, and grocery export text
+- [x] Add persistent per-recipe exclusions and ensure they alter both weeks of the meal rotation
+- [x] Add an interactive locally persisted grocery checklist with completion states and clear-all control
+- [x] Add a print-ready grocery checklist output for native devices and web
+- [x] Add and run deterministic tests for recipe exclusions and grocery checklist persistence and print text

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
+import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 
 import { ScreenContainer } from "@/components/screen-container";
-import { buildWeeklyPlan, formatGroceryListExport, loadMealSwaps, loadProfile, saveMealSwaps, saveProfile, type MealFrequency, type MealSwap, type ServingSize, type UserProfile } from "@/lib/rootedfit-profile";
+import { buildWeeklyPlan, formatGroceryChecklistPrintHtml, formatGroceryListExport, loadGroceryChecklist, loadMealSwaps, loadProfile, saveGroceryChecklist, saveMealSwaps, saveProfile, type GroceryChecklistItem, type MealFrequency, type MealSwap, type ServingSize, type UserProfile } from "@/lib/rootedfit-profile";
 
 const FREQUENCIES: { value: MealFrequency; label: string; description: string }[] = [
   { value: "one_plus_snack", label: "One main meal + snack ideas", description: "One full recipe and two snack ideas each day." },
@@ -21,16 +22,21 @@ const SERVING_SIZES: { value: ServingSize; label: string; description: string }[
 export default function MealsScreen() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [swaps, setSwaps] = useState<MealSwap[]>([]);
+  const [checklist, setChecklist] = useState<GroceryChecklistItem[]>([]);
   const [dayIndex, setDayIndex] = useState(0);
 
   useEffect(() => {
     loadProfile().then(setProfile);
     loadMealSwaps().then(setSwaps);
+    loadGroceryChecklist().then(setChecklist);
   }, []);
 
   const plan = useMemo(() => (profile ? buildWeeklyPlan(profile) : null), [profile]);
   const day = plan?.dailyMeals[dayIndex];
   const groceryExport = useMemo(() => (plan ? formatGroceryListExport(plan, profile?.city) : ""), [plan, profile?.city]);
+  const checklistItems = useMemo(() => plan ? plan.shoppingGroups.filter((group) => group.title !== "Storage reminder").flatMap((group) => group.items) : [], [plan]);
+  const checklistKey = (item: string) => `${profile?.rotationWeek ?? 1}:${profile?.servingSize ?? "regular"}:${item}`;
+  const checkedCount = checklistItems.filter((item) => checklist.find((entry) => entry.key === checklistKey(item))?.checked).length;
 
   const updateProfile = async (patch: Partial<UserProfile>) => {
     if (!profile) return;
@@ -53,6 +59,45 @@ export default function MealsScreen() {
     const next = [...swaps.filter((swap) => swap.slotKey !== slotKey), { slotKey, recipeIndex: (existing + 1) % pool.length }];
     setSwaps(next);
     await saveMealSwaps(next);
+  };
+
+  const toggleGroceryItem = async (item: string) => {
+    const key = checklistKey(item);
+    const existing = checklist.find((entry) => entry.key === key);
+    const next = existing ? checklist.map((entry) => entry.key === key ? { ...entry, checked: !entry.checked } : entry) : [...checklist, { key, checked: true }];
+    setChecklist(next);
+    await saveGroceryChecklist(next);
+  };
+
+  const clearChecklist = async () => {
+    const activeKeys = new Set(checklistItems.map(checklistKey));
+    const next = checklist.map((entry) => activeKeys.has(entry.key) ? { ...entry, checked: false } : entry);
+    setChecklist(next);
+    await saveGroceryChecklist(next);
+  };
+
+  const excludeRecipe = async (sourceTitle: string, breakfast: boolean) => {
+    if (!profile || !plan) return;
+    const availableTitles = new Set((breakfast ? plan.breakfastMeals : plan.meals).map((meal) => meal.sourceTitle ?? meal.title));
+    if (availableTitles.size <= 1) {
+      Alert.alert("Keep one recipe available", "Restore or keep at least one main recipe in the current rotation before excluding another.");
+      return;
+    }
+    await updateProfile({ excludedRecipeTitles: [...profile.excludedRecipeTitles, sourceTitle] });
+  };
+
+  const restoreRecipe = async (sourceTitle: string) => {
+    if (!profile) return;
+    await updateProfile({ excludedRecipeTitles: profile.excludedRecipeTitles.filter((title) => title !== sourceTitle) });
+  };
+
+  const printChecklist = async () => {
+    try {
+      if (Platform.OS === "web") await Print.printAsync({});
+      else await Print.printAsync({ html: formatGroceryChecklistPrintHtml(plan!, profile?.city, checklistItems.filter((item) => checklist.find((entry) => entry.key === checklistKey(item))?.checked)) });
+    } catch {
+      Alert.alert("Print could not open", "Try exporting the grocery list as text instead.");
+    }
   };
 
   const shareGroceryList = async () => {
@@ -93,9 +138,11 @@ export default function MealsScreen() {
 
     <Text style={styles.sectionTitle}>Recipes for your selected day</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>{plan.dailyMeals.map((item, index) => <Pressable key={item.label} onPress={() => setDayIndex(index)} style={[styles.chip, dayIndex === index && styles.chipActive]}><Text style={[styles.chipText, dayIndex === index && styles.chipTextActive]}>{item.label}</Text></Pressable>)}</ScrollView>
 
-    <View style={styles.card}><Text style={styles.kicker}>{day.label.toUpperCase()} · {plan.rotationLabel.toUpperCase()}</Text>{day.slots.map((slot) => { const key = `${profile.rotationWeek}-${day.day}-${slot.label}`; const isBreakfast = slot.label === "Breakfast"; const recipe = recipeFor(key, slot.meal, isBreakfast); return <View key={slot.label} style={styles.slot}><Text style={styles.slotLabel}>{slot.label}{isBreakfast ? " · LIGHT & PROTEIN-FORWARD" : ""}</Text><Text style={styles.recipeTitle}>{recipe.title}</Text><Text style={styles.focus}>{recipe.focus}</Text><Text style={styles.ingredients}>Ingredients: {recipe.ingredients.join(" · ")}</Text><Pressable onPress={() => swapRecipe(key, recipe.title, isBreakfast)} style={styles.swap}><Text style={styles.swapText}>Swap this {isBreakfast ? "breakfast" : "meal"} →</Text></Pressable><Text style={styles.methodTitle}>How to make it</Text>{recipe.steps.map((step, index) => <Text key={step} style={styles.method}>{index + 1}. {step}</Text>)}<Text style={styles.note}>{recipe.equipmentNote}</Text><Text style={styles.drink}>Drink idea: {recipe.drink}</Text></View>; })}{day.snackIdeas.length ? <View style={styles.snacks}><Text style={styles.slotLabel}>Optional snack ideas</Text>{day.snackIdeas.map((idea) => <Text key={idea} style={styles.method}>• {idea}</Text>)}</View> : null}</View>
+    <View style={styles.card}><Text style={styles.kicker}>{day.label.toUpperCase()} · {plan.rotationLabel.toUpperCase()}</Text>{day.slots.map((slot) => { const key = `${profile.rotationWeek}-${day.day}-${slot.label}`; const isBreakfast = slot.label === "Breakfast"; const recipe = recipeFor(key, slot.meal, isBreakfast); return <View key={slot.label} style={styles.slot}><Text style={styles.slotLabel}>{slot.label}{isBreakfast ? " · LIGHT & PROTEIN-FORWARD" : ""}</Text><Text style={styles.recipeTitle}>{recipe.title}</Text><Text style={styles.focus}>{recipe.focus}</Text><Text style={styles.ingredients}>Ingredients: {recipe.ingredients.join(" · ")}</Text><View style={styles.exportRow}><Pressable onPress={() => swapRecipe(key, recipe.title, isBreakfast)} style={styles.swap}><Text style={styles.swapText}>Swap this {isBreakfast ? "breakfast" : "meal"} →</Text></Pressable><Pressable onPress={() => excludeRecipe(recipe.sourceTitle ?? recipe.title, isBreakfast)} style={styles.swap}><Text style={styles.swapText}>Remove from rotation</Text></Pressable></View><Text style={styles.methodTitle}>How to make it</Text>{recipe.steps.map((step, index) => <Text key={step} style={styles.method}>{index + 1}. {step}</Text>)}<Text style={styles.note}>{recipe.equipmentNote}</Text><Text style={styles.drink}>Drink idea: {recipe.drink}</Text></View>; })}{day.snackIdeas.length ? <View style={styles.snacks}><Text style={styles.slotLabel}>Optional snack ideas</Text>{day.snackIdeas.map((idea) => <Text key={idea} style={styles.method}>• {idea}</Text>)}</View> : null}</View>
 
-    <View style={styles.card}><Text style={styles.kicker}>GROCERY LIST FROM THIS WEEK’S RECIPES</Text><Text style={styles.groceryIntro}>This list includes the ingredients in the scheduled meals above, including your current serving preference.</Text>{plan.shoppingGroups.map((group) => <View key={group.title} style={styles.groceryGroup}><Text style={styles.groceryTitle}>{group.title}</Text>{group.items.map((item) => <Text key={item} style={styles.method}>□ {item}</Text>)}</View>)}<View style={styles.exportRow}><Pressable onPress={exportGroceryList} style={styles.exportPrimary}><Text style={styles.exportPrimaryText}>Export list</Text></Pressable><Pressable onPress={shareGroceryList} style={styles.exportSecondary}><Text style={styles.exportSecondaryText}>Share text</Text></Pressable></View><Text style={styles.exportNote}>Export makes a plain-text grocery file on iOS and Android. On web, Share text uses your browser’s available sharing option.</Text></View>
+    {profile.excludedRecipeTitles.length ? <View style={styles.card}><Text style={styles.kicker}>REMOVED FROM FUTURE ROTATIONS</Text><Text style={styles.groceryIntro}>Restore any recipe when you want it available again.</Text>{profile.excludedRecipeTitles.map((title) => <View key={title} style={styles.exportRow}><Text style={styles.method}>{title}</Text><Pressable onPress={() => restoreRecipe(title)} style={styles.swap}><Text style={styles.swapText}>Restore</Text></Pressable></View>)}</View> : null}
+
+    <View style={styles.card}><Text style={styles.kicker}>INTERACTIVE GROCERY CHECKLIST</Text><Text style={styles.groceryIntro}>{checkedCount} of {checklistItems.length} items marked. Your ticks stay on this device for this rotation and serving preference.</Text>{plan.shoppingGroups.map((group) => <View key={group.title} style={styles.groceryGroup}><Text style={styles.groceryTitle}>{group.title}</Text>{group.items.map((item) => { const interactive = group.title !== "Storage reminder"; const checked = checklist.find((entry) => entry.key === checklistKey(item))?.checked ?? false; return interactive ? <Pressable key={item} onPress={() => toggleGroceryItem(item)} style={[styles.swap, checked && styles.choiceActive]}><Text style={styles.swapText}>{checked ? "✓" : "□"} {item}</Text></Pressable> : <Text key={item} style={styles.method}>• {item}</Text>; })}</View>)}<Pressable onPress={clearChecklist} style={styles.exportSecondary}><Text style={styles.exportSecondaryText}>Clear this checklist</Text></Pressable><View style={styles.exportRow}><Pressable onPress={printChecklist} style={styles.exportPrimary}><Text style={styles.exportPrimaryText}>Print checklist</Text></Pressable><Pressable onPress={exportGroceryList} style={styles.exportSecondary}><Text style={styles.exportSecondaryText}>Export list</Text></Pressable></View><Pressable onPress={shareGroceryList} style={styles.exportSecondary}><Text style={styles.exportSecondaryText}>Share grocery text</Text></Pressable><Text style={styles.exportNote}>Print opens the native print flow on phones and the browser print dialog on web. Export makes a plain-text grocery file on iOS and Android.</Text></View>
   </ScrollView></ScreenContainer>;
 }
 

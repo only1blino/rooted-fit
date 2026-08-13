@@ -18,6 +18,7 @@ export type UserProfile = {
   kitchenEquipment: string[];
   otherKitchenEquipment: string[];
   favoriteMeals: string[];
+  excludedRecipeTitles: string[];
   favoriteFruits: string[];
   localIngredients: string[];
   dietaryNotes: string;
@@ -46,6 +47,7 @@ export type UserProfile = {
 export type MealDay = {
   day: number;
   label: string;
+  sourceTitle?: string;
   title: string;
   focus: string;
   ingredients: string[];
@@ -119,6 +121,7 @@ export type ProgressPhoto = {
 export type MealSwap = { slotKey: string; recipeIndex: number };
 export type WorkoutSessionState = { workoutId: string; saved: boolean; completedAt: string | null };
 export type DailyWaterLog = { date: string; millilitres: number };
+export type GroceryChecklistItem = { key: string; checked: boolean };
 
 export const profileStorageKey = "rootedfit.profile.v2";
 const legacyProfileStorageKey = "rootedfit.profile.v1";
@@ -128,6 +131,7 @@ export const progressPhotosStorageKey = "rootedfit.progress-photos.v1";
 export const mealSwapsStorageKey = "rootedfit.meal-swaps.v1";
 export const workoutSessionsStorageKey = "rootedfit.workout-sessions.v1";
 export const waterLogsStorageKey = "rootedfit.water-logs.v1";
+export const groceryChecklistStorageKey = "rootedfit.grocery-checklist.v1";
 
 export const emptyProfile: UserProfile = {
   city: "",
@@ -138,6 +142,7 @@ export const emptyProfile: UserProfile = {
   kitchenEquipment: [],
   otherKitchenEquipment: [],
   favoriteMeals: [],
+  excludedRecipeTitles: [],
   favoriteFruits: [],
   localIngredients: [],
   dietaryNotes: "",
@@ -171,6 +176,7 @@ function normaliseProfile(profile: Partial<UserProfile>): UserProfile {
     kitchenEquipment: profile.kitchenEquipment ?? [],
     otherKitchenEquipment: profile.otherKitchenEquipment ?? [],
     favoriteMeals: profile.favoriteMeals ?? [],
+    excludedRecipeTitles: profile.excludedRecipeTitles ?? [],
     favoriteFruits: profile.favoriteFruits ?? [],
     localIngredients: profile.localIngredients ?? [],
     dietaryRestrictions: profile.dietaryRestrictions ?? [],
@@ -252,6 +258,12 @@ export function formatGroceryListExport(plan: WeeklyPlan, city = "your area") {
   return `ROOTEDFIT GROCERY LIST\n${plan.rotationLabel}\nPlan area: ${city || "your area"}\n\n${groups}\n\nBuilt from the recipes in this local plan. Choose quantities that fit your household, storage, and shopping rhythm.`;
 }
 
+export function formatGroceryChecklistPrintHtml(plan: WeeklyPlan, city = "your area", checkedItems: string[] = []) {
+  const escape = (value: string) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const groups = plan.shoppingGroups.map((group) => `<section><h2>${escape(group.title)}</h2><ul>${group.items.map((item) => `<li>${checkedItems.includes(item) ? "☑" : "☐"} ${escape(item)}</li>`).join("")}</ul></section>`).join("");
+  return `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>@page{margin:22px}body{font-family:Arial,sans-serif;color:#1f2a25}h1{color:#2d6a4f;margin-bottom:4px}p{color:#526259}h2{font-size:15px;border-bottom:1px solid #dce6db;padding-bottom:5px;margin-top:20px}ul{list-style:none;padding:0}li{font-size:14px;line-height:1.65}</style></head><body><h1>RootedFit grocery checklist</h1><p>${escape(plan.rotationLabel)} · ${escape(city || "Your area")}</p>${groups}</body></html>`;
+}
+
 function movementAdaptation(profile: UserProfile) {
   const parts: string[] = [];
   if (profile.workoutResources.includes("Yoga mat")) parts.push("Use your mat for floor work.");
@@ -298,7 +310,7 @@ export async function saveProfile(profile: UserProfile) {
 }
 
 export async function clearProfile() {
-  await AsyncStorage.multiRemove([profileStorageKey, legacyProfileStorageKey, checkInsStorageKey, measurementsStorageKey, progressPhotosStorageKey, mealSwapsStorageKey, workoutSessionsStorageKey, waterLogsStorageKey]);
+  await AsyncStorage.multiRemove([profileStorageKey, legacyProfileStorageKey, checkInsStorageKey, measurementsStorageKey, progressPhotosStorageKey, mealSwapsStorageKey, workoutSessionsStorageKey, waterLogsStorageKey, groceryChecklistStorageKey]);
 }
 
 export async function loadCheckIns(): Promise<DailyCheckIn[]> {
@@ -373,6 +385,16 @@ export async function saveWaterLogs(logs: DailyWaterLog[]) {
   await AsyncStorage.setItem(waterLogsStorageKey, JSON.stringify(logs.slice(0, 90)));
 }
 
+export async function loadGroceryChecklist(): Promise<GroceryChecklistItem[]> {
+  const saved = await AsyncStorage.getItem(groceryChecklistStorageKey);
+  if (!saved) return [];
+  try { return JSON.parse(saved) as GroceryChecklistItem[]; } catch { return []; }
+}
+
+export async function saveGroceryChecklist(items: GroceryChecklistItem[]) {
+  await AsyncStorage.setItem(groceryChecklistStorageKey, JSON.stringify(items.slice(0, 120)));
+}
+
 export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
   const localIngredients = profile.localIngredients.length ? profile.localIngredients : ["tomato", "onion", "leafy greens"];
   const storageNote = foodStorageNote(profile);
@@ -427,11 +449,12 @@ export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
   ];
   const rotationRecipes = profile.rotationWeek === 2 ? weekTwoRecipes : regionalRecipes;
   const restrictionSafeRecipes = rotationRecipes.filter((recipe) => !excluded.some((item) => `${recipe.title} ${recipe.ingredients.join(" ")}`.toLowerCase().includes(item)));
-  const plantBasedRecipes = restrictionSafeRecipes.filter((recipe) => !/(chicken|fish|egg|catfish)/i.test(`${recipe.title} ${recipe.ingredients.join(" ")}`));
-  const usableRecipes = usesAnimalFoods ? restrictionSafeRecipes : plantBasedRecipes.length ? plantBasedRecipes : restrictionSafeRecipes;
-  const makeMeal = (recipe: Omit<MealDay, "day" | "label" | "storageNote" | "equipmentNote">, day: number, label: string) => { const focus = focusMealDetails(profile.goal, applyServingPreference(recipe.ingredients, profile.servingSize)); return { ...recipe, title: `${focus.titlePrefix}${recipe.title}`, ingredients: focus.ingredients, focus: `${recipe.focus}. ${focus.note}`, day, label, storageNote, equipmentNote: recipeEquipmentNote }; };
+  const availableRecipes = restrictionSafeRecipes.filter((recipe) => !profile.excludedRecipeTitles.includes(recipe.title));
+  const plantBasedRecipes = availableRecipes.filter((recipe) => !/(chicken|fish|egg|catfish)/i.test(`${recipe.title} ${recipe.ingredients.join(" ")}`));
+  const usableRecipes = usesAnimalFoods ? availableRecipes : plantBasedRecipes.length ? plantBasedRecipes : availableRecipes;
+  const makeMeal = (recipe: Omit<MealDay, "day" | "label" | "storageNote" | "equipmentNote" | "sourceTitle">, day: number, label: string) => { const focus = focusMealDetails(profile.goal, applyServingPreference(recipe.ingredients, profile.servingSize)); return { ...recipe, sourceTitle: recipe.title, title: `${focus.titlePrefix}${recipe.title}`, ingredients: focus.ingredients, focus: `${recipe.focus}. ${focus.note}`, day, label, storageNote, equipmentNote: recipeEquipmentNote }; };
   const mealPlan = labels.map((label, index) => makeMeal(usableRecipes.length ? usableRecipes[index % usableRecipes.length] : rotationRecipes[0], index + 1, label));
-  const breakfastCandidates = breakfastRecipes.filter((recipe) => !excluded.some((item) => `${recipe.title} ${recipe.ingredients.join(" ")}`.toLowerCase().includes(item)));
+  const breakfastCandidates = breakfastRecipes.filter((recipe) => !excluded.some((item) => `${recipe.title} ${recipe.ingredients.join(" ")}`.toLowerCase().includes(item)) && !profile.excludedRecipeTitles.includes(recipe.title));
   const breakfastPlantBased = breakfastCandidates.filter((recipe) => !/(egg|yoghurt|milk)/i.test(`${recipe.title} ${recipe.ingredients.join(" ")}`));
   const usableBreakfasts = usesAnimalFoods ? breakfastCandidates : breakfastPlantBased.length ? breakfastPlantBased : breakfastCandidates;
   const breakfastMeals = labels.map((label, index) => makeMeal(usableBreakfasts.length ? usableBreakfasts[index % usableBreakfasts.length] : breakfastRecipes[5], index + 1, label));

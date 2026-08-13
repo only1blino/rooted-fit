@@ -14,7 +14,7 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
-import { buildWeeklyPlan, formatGroceryListExport, loadCheckIns, loadMealSwaps, loadMeasurements, loadProfile, loadProgressPhotos, loadWorkoutSessionStates, numberOrNull, saveCheckIns, saveMealSwaps, saveMeasurements, saveProfile, saveProgressPhotos, saveWorkoutSessionStates, splitList, type UserProfile } from "../lib/rootedfit-profile";
+import { buildWeeklyPlan, formatGroceryChecklistPrintHtml, formatGroceryListExport, loadCheckIns, loadGroceryChecklist, loadMealSwaps, loadMeasurements, loadProfile, loadProgressPhotos, loadWorkoutSessionStates, numberOrNull, saveCheckIns, saveGroceryChecklist, saveMealSwaps, saveMeasurements, saveProfile, saveProgressPhotos, saveWorkoutSessionStates, splitList, type UserProfile } from "../lib/rootedfit-profile";
 import { suggestedFoods, suggestedFruits, suggestedMeals } from "../lib/food-catalogue";
 
 const microwaveProfile: UserProfile = {
@@ -26,6 +26,7 @@ const microwaveProfile: UserProfile = {
   kitchenEquipment: ["Microwave"],
   otherKitchenEquipment: [],
   favoriteMeals: ["yam and pepper soup", "rice and stew"],
+  excludedRecipeTitles: [],
   favoriteFruits: ["Mango"],
   localIngredients: ["carrots", "cucumbers", "beans"],
   dietaryNotes: "",
@@ -146,6 +147,20 @@ describe("RootedFit weekly plan builder", () => {
     expect(text).toContain("Week 2");
     expect(text).toContain("Plan area: Lagos");
     expect(text).toContain("Tomato egg and vegetable rice bowl".includes("Tomato") ? "tomato" : "");
+  });
+
+  it("removes excluded recipes from the selected rotation and persists checklist ticks with print-ready output", async () => {
+    const excludedTitle = "Nigerian jollof rice with chicken and cabbage slaw";
+    const plan = buildWeeklyPlan({ ...microwaveProfile, excludedRecipeTitles: [excludedTitle] });
+    const groceryKey = "1:regular:2 eggs";
+    const checklist = [{ key: groceryKey, checked: true }];
+
+    expect(plan.meals.map((meal) => meal.sourceTitle)).not.toContain(excludedTitle);
+    await saveGroceryChecklist(checklist);
+    await expect(loadGroceryChecklist()).resolves.toEqual(checklist);
+    const printable = formatGroceryChecklistPrintHtml(plan, "Lagos", ["2 eggs"]);
+    expect(printable).toContain("RootedFit grocery checklist");
+    expect(printable).toContain("☑ 2 eggs");
   });
 
   it("persists the expanded onboarding profile locally", async () => {
