@@ -108,4 +108,9 @@
 - [x] Adapt daily workout instructions and exercise volume to the selected difficulty without medical claims
 - [x] Add a brief cross-platform ingredient highlight when a serving preference is changed
 - [x] Add regression coverage for difficulty persistence and day-specific workout plans
-- [ ] Validate, publish, and push the updated web and Expo release to GitHub
+- [x] Validate, publish, and push the updated web and Expo release to GitHub
+- [x] Add inclusive instructor options that respect selected gender preferences without restricting access to alternatives
+- [x] Replace recipe-fraction grocery lines with practical household shopping quantities and purchase units
+- [x] Keep detailed recipe portions separate from the realistic grocery checklist and exports
+- [x] Add regression coverage for instructor selection and practical grocery aggregation
+- [ ] Validate, publish, and push the inclusive web and Expo release to GitHub

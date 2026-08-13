@@ -14,7 +14,7 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
-import { buildWeeklyPlan, categorizeGroceryItems, findSimilarRecipe, formatGroceryChecklistPrintHtml, formatGroceryListExport, loadCheckIns, loadCompletionRatings, loadExerciseLogs, loadGroceryChecklist, loadMealSwaps, loadMeasurements, loadProfile, loadProgressPhotos, loadWorkoutSessionStates, numberOrNull, saveCheckIns, saveCompletionRatings, saveExerciseLogs, saveGroceryChecklist, saveMealSwaps, saveMeasurements, saveProfile, saveProgressPhotos, saveWorkoutSessionStates, splitList, type UserProfile } from "../lib/rootedfit-profile";
+import { buildWeeklyPlan, categorizeGroceryItems, findSimilarRecipe, formatGroceryChecklistPrintHtml, formatGroceryListExport, loadCheckIns, loadCompletionRatings, loadExerciseLogs, loadGroceryChecklist, loadMealSwaps, loadMeasurements, loadProfile, loadProgressPhotos, loadWorkoutSessionStates, numberOrNull, practicalGroceryItems, saveCheckIns, saveCompletionRatings, saveExerciseLogs, saveGroceryChecklist, saveMealSwaps, saveMeasurements, saveProfile, saveProgressPhotos, saveWorkoutSessionStates, splitList, type UserProfile } from "../lib/rootedfit-profile";
 import { suggestedFoods, suggestedFruits, suggestedMeals } from "../lib/food-catalogue";
 
 const microwaveProfile: UserProfile = {
@@ -64,7 +64,7 @@ describe("RootedFit weekly plan builder", () => {
     expect(plan.meals[0].title).toContain("Nigerian jollof rice");
     expect(plan.meals[0].equipmentNote).toContain("microwave-only kitchen");
     expect(plan.meals[0].storageNote).toContain("same-day portions");
-    expect(plan.shoppingGroups.flatMap((group) => group.items)).toContain("¾ cup parboiled rice");
+    expect(plan.shoppingGroups.flatMap((group) => group.items)).toContain("Rice — 1 kg or a smaller bag");
     expect(plan.workouts[1].videoUrl).toContain("youtube.com");
     expect(plan.workouts[1].videoTitle).toContain("PILATES");
     expect(plan.dailyMeals[0].slots).toHaveLength(3);
@@ -105,7 +105,7 @@ describe("RootedFit weekly plan builder", () => {
 
     expect(weightLossPlan.meals[0].focus).toContain("lighter staple portion");
     expect(weightGainPlan.meals[0].focus).toContain("fuller staple portion");
-    expect(weightGainPlan.shoppingGroups[0].items).toContain("1 energy-supporting add-on: groundnuts, yoghurt, milk, avocado, beans, or seeds if suitable");
+    expect(weightGainPlan.shoppingGroups.flatMap((group) => group.items)).toContain("Groundnuts or seeds — 1 small packet");
   });
 
   it("uses distinct weight-loss and weight-gain plates rather than only changing explanatory copy", () => {
@@ -140,8 +140,8 @@ describe("RootedFit weekly plan builder", () => {
     expect(weekTwo.meals[0].ingredients).toContain("½ cup rice");
     expect(lighter.meals[0].ingredients).toContain("⅓ cup rice");
     expect(generous.meals[0].ingredients).toContain("¾ cup rice");
-    expect(lighter.shoppingGroups.flatMap((group) => group.items)).toContain("⅓ cup rice");
-    expect(generous.shoppingGroups.flatMap((group) => group.items)).toContain("¾ cup rice");
+    expect(lighter.shoppingGroups.flatMap((group) => group.items)).toContain("Rice — 1 kg or a smaller bag");
+    expect(generous.shoppingGroups.flatMap((group) => group.items)).toContain("Rice — 1 kg or a smaller bag");
   });
 
   it("provides seven distinct day-by-day home workouts instead of a repeated two-session library", () => {
@@ -172,21 +172,36 @@ describe("RootedFit weekly plan builder", () => {
     expect(text).toContain("ROOTEDFIT GROCERY LIST");
     expect(text).toContain("Week 2");
     expect(text).toContain("Plan area: Lagos");
-    expect(text).toContain("Tomato egg and vegetable rice bowl".includes("Tomato") ? "tomato" : "");
+    expect(text).toContain("Tomatoes — 6–8 medium");
   });
 
   it("removes excluded recipes from the selected rotation and persists checklist ticks with print-ready output", async () => {
     const excludedTitle = "Nigerian jollof rice with chicken and cabbage slaw";
     const plan = buildWeeklyPlan({ ...microwaveProfile, excludedRecipeTitles: [excludedTitle] });
-    const groceryKey = "1:regular:2 eggs";
+    const groceryKey = "1:regular:Eggs — 1 half-dozen or a tray";
     const checklist = [{ key: groceryKey, checked: true }];
 
     expect(plan.meals.map((meal) => meal.sourceTitle)).not.toContain(excludedTitle);
     await saveGroceryChecklist(checklist);
     await expect(loadGroceryChecklist()).resolves.toEqual(checklist);
-    const printable = formatGroceryChecklistPrintHtml(plan, "Lagos", ["2 eggs"]);
+    const printable = formatGroceryChecklistPrintHtml(plan, "Lagos", ["Eggs — 1 half-dozen or a tray"]);
     expect(printable).toContain("RootedFit grocery checklist");
-    expect(printable).toContain("☑ 2 eggs");
+    expect(printable).toContain("☑ Eggs — 1 half-dozen or a tray");
+  });
+
+  it("uses practical household purchase units for groceries while keeping recipe portions detailed", () => {
+    const groceries = practicalGroceryItems(["½ bell pepper", "1 teaspoon oil", "1 slice bread", "⅓ cup firm tofu", "¼ onion"]);
+
+    expect(groceries).toEqual(expect.arrayContaining(["Bell peppers or fresh peppers — 2–3 whole", "Cooking oil — 1 small bottle", "Bread — 1 small loaf", "Firm tofu — 1 block", "Onions — 5–6 medium"]));
+    expect(groceries.join(" ")).not.toMatch(/½|⅓|¼|teaspoon|slice/);
+  });
+
+  it("places a man-led instructor option first for men while retaining an alternative instructor link", () => {
+    const plan = buildWeeklyPlan({ ...microwaveProfile, genderIdentity: "Man" });
+
+    expect(plan.workouts[0].instructorOptions).toHaveLength(2);
+    expect(plan.workouts[0].instructorOptions[0].label).toBe("Man-led option");
+    expect(plan.workouts[0].instructorOptions[1].label).toBe("Woman-led option");
   });
 
   it("finds a similar available recipe and organizes the unchanged grocery ingredients by supermarket section", () => {

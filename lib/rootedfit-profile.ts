@@ -5,6 +5,7 @@ export type ShoppingFrequency = "daily" | "weekly" | "biweekly" | "monthly";
 export type MealFrequency = "one_plus_snack" | "two" | "three";
 export type ServingSize = "lighter" | "regular" | "generous";
 export type WorkoutDifficulty = "beginner" | "intermediate" | "advanced";
+export type WorkoutInstructorOption = { label: string; name: string; videoTitle: string; videoUrl: string; videoProvider: string };
 export type SweetToothPreference = "none" | "healthier_swaps" | "portion_guidance";
 export type WellnessGoal = "consistency" | "energy" | "toning" | "core_mobility" | "body_composition" | "weight_loss" | "weight_gain" | null;
 export type MeasurementUnit = "ft_in_kg" | "cm_lb";
@@ -71,6 +72,7 @@ export type WorkoutDay = {
   videoUrl: string;
   videoProvider: string;
   difficulty: WorkoutDifficulty;
+  instructorOptions: WorkoutInstructorOption[];
 };
 
 export type ShoppingGroup = {
@@ -311,6 +313,16 @@ export function categorizeGroceryItems(items: string[]): ShoppingGroup[] {
   return Object.entries(categories).filter(([, categoryItems]) => categoryItems.length > 0).map(([title, categoryItems]) => ({ title, items: categoryItems }));
 }
 
+/** Turns preparation amounts into realistic purchase units for the weekly household list. */
+export function practicalGroceryItems(recipeIngredients: string[]) {
+  const purchaseRules: { pattern: RegExp; item: string }[] = [
+    { pattern: /tomato/i, item: "Tomatoes — 6–8 medium" }, { pattern: /onion/i, item: "Onions — 5–6 medium" }, { pattern: /bell pepper|fresh pepper/i, item: "Bell peppers or fresh peppers — 2–3 whole" }, { pattern: /cucumber/i, item: "Cucumbers — 2 whole" }, { pattern: /carrot/i, item: "Carrots — 4–6 whole" }, { pattern: /cabbage/i, item: "Cabbage — 1 small head" }, { pattern: /spinach|greens|ugu|efo|kontomire|kale|sukuma/i, item: "Leafy greens — 1 medium bunch or bag" }, { pattern: /plantain/i, item: "Ripe plantains — 2–3 whole" }, { pattern: /sweet potato/i, item: "Sweet potatoes — 2–3 small" }, { pattern: /yam/i, item: "Yam — 1 small tuber or a cut market portion" }, { pattern: /fruit|mango|orange|banana|avocado/i, item: "Fruit — 4–6 pieces" },
+    { pattern: /rice/i, item: "Rice — 1 kg or a smaller bag" }, { pattern: /beans|lentil|cow beans|black-eyed/i, item: "Beans or lentils — 500 g or 1 small bag" }, { pattern: /egg/i, item: "Eggs — 1 half-dozen or a tray" }, { pattern: /chicken/i, item: "Chicken — 4–6 palm-sized portions" }, { pattern: /catfish|fish/i, item: "Fish — 4–6 portions or a small market pack" }, { pattern: /tofu/i, item: "Firm tofu — 1 block" }, { pattern: /yoghurt/i, item: "Plain yoghurt — 1 small tub" }, { pattern: /milk/i, item: "Milk or fortified soy milk — 1 small carton" }, { pattern: /oats/i, item: "Oats — 1 small bag or packet" }, { pattern: /bread/i, item: "Bread — 1 small loaf" }, { pattern: /chapati|flatbread/i, item: "Chapati or flatbread — 1 small pack" }, { pattern: /pap/i, item: "Pap or cereal base — 1 small pack" }, { pattern: /maize flour|maize/i, item: "Maize flour or maize — 1 small bag or pack" }, { pattern: /semo/i, item: "Semo — 1 small bag" }, { pattern: /groundnut paste/i, item: "Groundnut paste — 1 small jar or sachet" }, { pattern: /groundnut|seeds/i, item: "Groundnuts or seeds — 1 small packet" }, { pattern: /oil/i, item: "Cooking oil — 1 small bottle" }, { pattern: /curry|thyme|spice|cumin|coriander|ginger|chili|crayfish/i, item: "Spices and seasonings — check your kitchen or buy small sachets" },
+  ];
+  const mapped = recipeIngredients.map((ingredient) => purchaseRules.find((rule) => rule.pattern.test(ingredient))?.item ?? ingredient.replace(/^\s*(?:\d+(?:[¼½¾⅓⅔]?|[½¼¾])?|a)\s*(?:cups?|tablespoons?|teaspoons?|slices?|portions?)\s*/i, "").replace(/^\s*[¼½¾⅓⅔]\s*/, ""));
+  return Array.from(new Set(mapped.filter(Boolean)));
+}
+
 function movementAdaptation(profile: UserProfile) {
   const parts: string[] = [];
   if (profile.workoutResources.includes("Yoga mat")) parts.push("Use your mat for floor work.");
@@ -546,7 +558,7 @@ export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
   }));
 
   const rounds = durationMinutes >= 30 ? 3 : 2;
-  const workoutTemplates: Omit<WorkoutDay, "day" | "label" | "durationMinutes" | "adaptation" | "difficulty">[] = [
+  const workoutTemplates: Omit<WorkoutDay, "day" | "label" | "durationMinutes" | "adaptation" | "difficulty" | "instructorOptions">[] = [
     { title: "Home toning: full-body foundation", category: "Strength & toning", instructions: ["Warm up for 3 minutes: march in place, shoulder rolls, and hip circles.", `Complete ${rounds} rounds: 10 chair sit-to-stands, 8 wall push-ups, 10 hip hinges, and 12 calf raises.`, "Rest for 45–60 seconds between rounds and finish with 2 minutes of relaxed stretching."], videoTitle: "30 MIN FULL BODY WORKOUT · At-Home Pilates", videoUrl: "https://www.youtube.com/watch?v=lBCBSy9cNT0", videoProvider: "Move With Nicole" },
     { title: "Pilates-inspired core: control block", category: "Core & control", instructions: ["Spend 3 minutes on slow breathing, pelvic tilts, and gentle spinal mobility.", `Complete ${rounds} rounds: 8 heel taps per side, 8 dead-bug reaches per side, and a 20-second supported tabletop hold.`, "Finish with 6 slow cat-cow movements or seated spinal rolls and a side-body stretch."], videoTitle: "30 MIN PILATES CORE WORKOUT · At-Home Pilates Abs", videoUrl: "https://www.youtube.com/watch?v=U5LwQW_IQOc", videoProvider: "Move With Nicole" },
     { title: "Walking rhythm: step builder", category: "Steps & stamina", instructions: ["Start with 3 minutes at an easy walking or marching pace.", `Alternate 2 minutes steady walking with 1 minute brisk walking or higher-knee marching for ${Math.max(4, Math.floor(durationMinutes / 3))} cycles.`, "Cool down for 3 minutes and stretch calves and ankles gently."], videoTitle: "30-Minute Yoga For Beginners", videoUrl: "https://www.youtube.com/watch?v=AB3Y-4a3ZrU", videoProvider: "Yoga With Adriene" },
@@ -554,6 +566,15 @@ export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
     { title: "Lower-body and balance block", category: "Strength & balance", instructions: ["Warm up near a stable chair or wall for support.", `Complete ${rounds} rounds: 10 sit-to-stands, 10 side steps per side, 10 glute bridges or standing hip extensions, and 10 calf raises.`, "Finish with one 20-second supported single-leg balance per side, only if it feels steady."], videoTitle: "30 MIN ABS & BOOTY WORKOUT · No Equipment", videoUrl: "https://www.youtube.com/watch?v=MvSK7dBbt8Q", videoProvider: "Move With Nicole" },
     { title: "Small-space cardio: no-equipment mix", category: "Movement variety", instructions: ["Use 3 minutes of easy marching and step touches to warm up.", `Complete ${rounds} rounds: 45 seconds marching, 45 seconds step touches, 45 seconds shadow boxing, then 45 seconds easy recovery.`, "Finish with 2 minutes of slow breathing and shoulder/leg stretches."], videoTitle: "30 MIN ABS & BOOTY · No Equipment", videoUrl: "https://www.youtube.com/watch?v=pKhKqYBP7qQ", videoProvider: "YouTube" },
     { title: "Recovery flow: restore and reset", category: "Recovery & mobility", instructions: ["Choose a calm space and take 6 slow breaths.", "Move gently through 8 cat-cow or seated spinal rolls, 8 hip circles per side, and 30 seconds of a comfortable child’s pose or chair fold.", "Finish with one sentence about what made movement possible today; no performance target is needed."], videoTitle: "30-Minute Yoga For Beginners", videoUrl: "https://www.youtube.com/watch?v=AB3Y-4a3ZrU", videoProvider: "Yoga With Adriene" },
+  ];
+  const maleInstructorOptions: WorkoutInstructorOption[] = [
+    { label: "Man-led option", name: "Joe Wicks", videoTitle: "10 Minute FULL BODY Workout", videoUrl: "https://www.youtube.com/watch?v=KrmYjcQzSsQ", videoProvider: "The Body Coach" },
+    { label: "Man-led option", name: "Joe Wicks", videoTitle: "10 Minute Abs Workout", videoUrl: "https://www.youtube.com/watch?v=aWJo_Fe20aE", videoProvider: "The Body Coach" },
+    { label: "Man-led option", name: "Joe Wicks", videoTitle: "First Steps To Fitness · Workout 1", videoUrl: "https://www.youtube.com/watch?v=JnCfnYPKc7w", videoProvider: "The Body Coach" },
+    { label: "Man-led option", name: "Joe Wicks", videoTitle: "First Steps To Fitness · Workout 2", videoUrl: "https://www.youtube.com/watch?v=mvMPjDLBBrk", videoProvider: "The Body Coach" },
+    { label: "Man-led option", name: "Joe Wicks", videoTitle: "Savage 10 Minute Leg Burner", videoUrl: "https://www.youtube.com/watch?v=5cAh3m5HCpw", videoProvider: "The Body Coach" },
+    { label: "Man-led option", name: "Joe Wicks", videoTitle: "7 Days of SWEAT · Day 1", videoUrl: "https://www.youtube.com/watch?v=5gvto1CA7Po", videoProvider: "The Body Coach" },
+    { label: "Man-led option", name: "Joe Wicks", videoTitle: "First Steps To Fitness · Workout 3", videoUrl: "https://www.youtube.com/watch?v=p5CKZupTBxo", videoProvider: "The Body Coach" },
   ];
   const difficulty = difficultyAdaptation(profile.workoutDifficulty);
   const workoutPlan = labels.map((label, index) => ({
@@ -564,14 +585,18 @@ export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
     instructions: [...workoutTemplates[index].instructions, difficulty.instruction],
     adaptation: `${difficulty.label} level. ${movementAdaptation(profile)} Keep the session pain-free; pause or choose a gentler option if anything feels wrong.`,
     difficulty: profile.workoutDifficulty,
+    instructorOptions: profile.genderIdentity === "Man"
+      ? [maleInstructorOptions[index], { label: "Woman-led option", name: workoutTemplates[index].videoProvider, videoTitle: workoutTemplates[index].videoTitle, videoUrl: workoutTemplates[index].videoUrl, videoProvider: workoutTemplates[index].videoProvider }]
+      : [{ label: profile.genderIdentity === "Woman" ? "Woman-led option" : "Featured option", name: workoutTemplates[index].videoProvider, videoTitle: workoutTemplates[index].videoTitle, videoUrl: workoutTemplates[index].videoUrl, videoProvider: workoutTemplates[index].videoProvider }, maleInstructorOptions[index]],
+    ...(profile.genderIdentity === "Man" ? { videoTitle: maleInstructorOptions[index].videoTitle, videoUrl: maleInstructorOptions[index].videoUrl, videoProvider: maleInstructorOptions[index].videoProvider } : {}),
   }));
 
   const longerShopping = profile.shoppingFrequency === "biweekly" || profile.shoppingFrequency === "monthly";
-  const categorizedGroceries = categorizeGroceryItems(Array.from(new Set([
+  const categorizedGroceries = categorizeGroceryItems(practicalGroceryItems([
     ...dailyMeals.flatMap((day) => day.slots.flatMap((slot) => slot.meal.ingredients)),
     ...localIngredients.slice(0, 6),
     profile.favoriteFruits[0] ? profile.favoriteFruits[0] : "A fruit you enjoy",
-  ])).slice(0, 60));
+  ]).slice(0, 60));
   return {
     rotationLabel: `Week ${profile.rotationWeek} of your two-week rotation`,
     goalTitle: goal.title,
