@@ -76,7 +76,10 @@
 - [x] Categorize grocery checklist items into standard supermarket sections without altering source recipe ingredients
 - [x] Add a downloadable and shareable PDF grocery checklist alongside the existing print and text-export flows
 - [x] Stabilize the TypeScript toolchain at the existing compatible 5.9.3 release after validating the requested 5.3 pin against tRPC requirements
-- [ ] Re-initialize the Expo application identity only after validating the existing EAS project configuration
+- [x] Leave the existing Expo identity unchanged and intentionally skip EAS linking for local Expo Go testing at the user’s request
 - [x] Add separate Drizzle schemas for user authentication/profile credentials and home-workout exercise logs
 - [x] Add a safe local workout-log interface for exercise name, set number, repetitions, and weight used
-- [ ] Generate and inspect migrations, validate compilation and behaviours, then commit and push the expansion to the configured GitHub remote
+- [x] Generate and inspect migrations, validate compilation and behaviours, then commit and push the expansion to the configured GitHub remote
+- [x] Review RootedFit’s existing Expo web build for tester-facing browser responsiveness and presentation gaps
+- [x] Adapt the existing local-first RootedFit flows for practical browser testing without changing meal, infrastructure, or workout logic
+- [x] Validate the web build and provide a checkpoint suitable for the user to publish and share with testers
