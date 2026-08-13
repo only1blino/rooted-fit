@@ -4,6 +4,8 @@
 **Product:** RootedFit  
 **Scope:** Phase 1 mobile MVP for infrastructure-aware nutrition and movement planning
 
+> **Implementation update — August 2026:** The original onboarding foundation described below has been expanded in the application to include robust comma-separated and numeric inputs, goals, optional body context, a seven-day rotating meal/workout plan, shopping and DIY recipe guidance, device-optional step tracking, daily check-ins, and optional weekly body-measurement history. The current product analysis and guardrails are documented in [Expanded Product Design](expanded_product_design.md) and [Expanded MVP Research Notes](expanded_mvp_research_notes.md).
+
 ## 1. Product Requirements Document
 
 ### Product summary

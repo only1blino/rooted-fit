@@ -9,3 +9,11 @@
 - [x] Create and configure the RootedFit application icon and branding
 - [x] Add unit tests for recommendation rules and onboarding persistence
 - [x] Validate TypeScript and core onboarding-to-dashboard flow
+- [x] Redesign text, numeric, and multi-select onboarding controls so commas and direct typing work reliably
+- [x] Add goals, gender identity, height, weight, and optional body-measurement baseline to onboarding with respectful privacy copy
+- [x] Expand kitchen and household workout-resource options beyond the initial quick-select list
+- [x] Build a varied 7-day infrastructure-aware meal plan with shopping lists, DIY recipes, drinks, and storage guidance
+- [x] Build a varied 7-day home-workout plan with toning, Pilates, core, mobility, and low-equipment variations
+- [x] Add a tracking page for daily check-ins, step logging, weekly measurements, and motivational messages
+- [x] Update product documentation and tests for the expanded wellness MVP
+- [x] Complete evidence-led product analysis for cultural food variety, power-aware storage, scalable activity, and editable step tracking

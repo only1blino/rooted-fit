@@ -8,13 +8,13 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
     setItem: vi.fn(async (key: string, value: string) => {
       storage.set(key, value);
     }),
-    removeItem: vi.fn(async (key: string) => {
-      storage.delete(key);
+    multiRemove: vi.fn(async (keys: string[]) => {
+      keys.forEach((key) => storage.delete(key));
     }),
   },
 }));
 
-import { buildDailyPlan, loadProfile, saveProfile, splitList, type UserProfile } from "../lib/rootedfit-profile";
+import { buildWeeklyPlan, loadCheckIns, loadMeasurements, loadProfile, numberOrNull, saveCheckIns, saveMeasurements, saveProfile, splitList, type UserProfile } from "../lib/rootedfit-profile";
 
 const microwaveProfile: UserProfile = {
   city: "Lagos",
@@ -22,32 +22,56 @@ const microwaveProfile: UserProfile = {
   marketMinutesAway: 20,
   shoppingFrequency: "biweekly",
   kitchenEquipment: ["Microwave"],
-  favoriteMeals: ["yam and pepper soup"],
-  localIngredients: ["carrots", "cucumbers"],
+  otherKitchenEquipment: [],
+  favoriteMeals: ["yam and pepper soup", "rice and stew"],
+  localIngredients: ["carrots", "cucumbers", "beans"],
+  dietaryNotes: "",
   dailyStepCount: 3500,
   workoutMinutesPerDay: 20,
-  workoutResources: ["Yoga mat"],
+  workoutResources: ["Yoga mat", "Safe floor space"],
+  otherWorkoutResources: [],
+  goal: "core_mobility",
+  genderIdentity: "Prefer not to say",
+  heightCm: null,
+  weightKg: null,
+  baselineWaistCm: null,
+  baselineHipCm: null,
+  baselineChestCm: null,
 };
 
-describe("RootedFit plan builder", () => {
+describe("RootedFit weekly plan builder", () => {
   beforeEach(() => storage.clear());
 
-  it("keeps favourite foods while adapting food storage to 12-hour power and a microwave", () => {
-    const plan = buildDailyPlan(microwaveProfile);
+  it("keeps favourite foods while adapting seven meal ideas to 12-hour power and a microwave", () => {
+    const plan = buildWeeklyPlan(microwaveProfile);
 
-    expect(plan.mealTitle).toContain("yam and pepper soup");
-    expect(plan.mealDescription).toContain("microwave");
-    expect(plan.electricityNote).toContain("same-day portions");
-    expect(plan.shoppingNote).toContain("dry grains");
+    expect(plan.meals).toHaveLength(7);
+    expect(plan.workouts).toHaveLength(7);
+    expect(plan.meals[0].title).toContain("yam and pepper soup");
+    expect(plan.meals[0].equipmentNote).toContain("steam, warm, or reheat");
+    expect(plan.meals[0].storageNote).toContain("same-day portions");
+    expect(plan.shoppingGroups[0].items).toContain("Beans, lentils, groundnuts, or another shelf-stable protein");
   });
 
-  it("cleans and limits comma-separated onboarding entries", () => {
+  it("keeps comma-separated field input stable and parses decimal number entries", () => {
     expect(splitList(" yam, rice, , pepper soup ")).toEqual(["yam", "rice", "pepper soup"]);
+    expect(numberOrNull("62,5")).toBe(62.5);
   });
 
-  it("persists a completed onboarding profile locally", async () => {
+  it("persists the expanded onboarding profile locally", async () => {
     await saveProfile(microwaveProfile);
 
     await expect(loadProfile()).resolves.toEqual(microwaveProfile);
+  });
+
+  it("persists daily check-ins and weekly measurements locally", async () => {
+    const checkIns = [{ id: "today", date: "2026-08-13", steps: 4500, mood: "good" as const, followedMealIdea: true, completedMovement: false, note: "Walked after lunch" }];
+    const measurements = [{ id: "week-1", date: "2026-08-13", weightKg: 62.5, waistCm: 74, hipCm: null, chestCm: null, note: "Morning check-in" }];
+
+    await saveCheckIns(checkIns);
+    await saveMeasurements(measurements);
+
+    await expect(loadCheckIns()).resolves.toEqual(checkIns);
+    await expect(loadMeasurements()).resolves.toEqual(measurements);
   });
 });

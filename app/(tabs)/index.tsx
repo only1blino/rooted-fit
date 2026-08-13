@@ -9,358 +9,172 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
 import {
-  buildDailyPlan,
+  buildWeeklyPlan,
   clearProfile,
   emptyProfile,
   loadProfile,
+  numberOrNull,
   saveProfile,
   splitList,
   type ShoppingFrequency,
   type UserProfile,
+  type WellnessGoal,
 } from "@/lib/rootedfit-profile";
 
-const KITCHEN_OPTIONS = ["Fridge", "Microwave", "Air fryer", "Stove"];
-const RESOURCE_OPTIONS = ["Yoga mat", "Internet for video workouts", "Weights or filled bottles", "Safe floor space"];
-const SHOPPING_OPTIONS: { label: string; value: ShoppingFrequency }[] = [
-  { label: "Daily", value: "daily" },
-  { label: "Weekly", value: "weekly" },
-  { label: "Every two weeks", value: "biweekly" },
-  { label: "Monthly", value: "monthly" },
+const KITCHEN_OPTIONS = ["Fridge", "Freezer", "Stove", "Gas burner", "Microwave", "Air fryer", "Oven", "Kettle", "Blender", "Rice cooker", "Pressure cooker", "Cooler or ice chest"];
+const RESOURCE_OPTIONS = ["Yoga mat", "Safe floor space", "Chair", "Stairs or a sturdy step", "Resistance band", "Weights or filled bottles", "Skipping rope", "Internet for video workouts", "Outdoor walking route", "TV or phone"];
+const GOALS: { label: string; value: WellnessGoal; description: string }[] = [
+  { label: "Build consistency", value: "consistency", description: "Small, repeatable food and movement habits." },
+  { label: "Feel more energetic", value: "energy", description: "Steadier routines for everyday energy." },
+  { label: "Strength & toning", value: "toning", description: "Home strength sessions without a gym." },
+  { label: "Core & mobility", value: "core_mobility", description: "Control, posture, and flexible movement." },
+  { label: "Body-composition habits", value: "body_composition", description: "Consistency and trends, never restrictive targets." },
 ];
 
-type Step = 0 | 1 | 2 | 3 | 4 | 5;
-
 function PrimaryButton({ label, onPress, disabled = false }: { label: string; onPress: () => void; disabled?: boolean }) {
+  return <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.primaryButton, disabled && styles.buttonDisabled, pressed && styles.buttonPressed]}><Text style={styles.primaryButtonText}>{label}</Text></Pressable>;
+}
+
+function ChoiceButton({ label, selected, onPress, description }: { label: string; selected: boolean; onPress: () => void; description?: string }) {
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ disabled }}
-      disabled={disabled}
-      onPress={onPress}
-      style={({ pressed }: { pressed: boolean }) => [styles.primaryButton, disabled && styles.buttonDisabled, pressed && styles.buttonPressed]}
-    >
-      <Text style={styles.primaryButtonText}>{label}</Text>
+    <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: selected }} onPress={onPress} style={({ pressed }) => [styles.choice, selected && styles.choiceSelected, pressed && styles.choicePressed]}>
+      <View style={styles.choiceCopy}>
+        <Text style={[styles.choiceText, selected && styles.choiceTextSelected]}>{selected ? "✓  " : ""}{label}</Text>
+        {description ? <Text style={styles.choiceDescription}>{description}</Text> : null}
+      </View>
     </Pressable>
   );
 }
 
-function ChoiceButton({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
-  return (
-    <Pressable
-      accessibilityRole="checkbox"
-      accessibilityState={{ checked: selected }}
-      onPress={onPress}
-      style={({ pressed }: { pressed: boolean }) => [styles.choice, selected && styles.choiceSelected, pressed && styles.choicePressed]}
-    >
-      <Text style={[styles.choiceText, selected && styles.choiceTextSelected]}>{selected ? "✓  " : ""}{label}</Text>
-    </Pressable>
-  );
-}
-
-function NumericField({ label, value, onChange, suffix, helper }: { label: string; value: number; onChange: (next: number) => void; suffix: string; helper?: string }) {
+function TextField({ label, value, onChangeText, placeholder, helper, multiline = false, keyboardType = "default" }: { label: string; value: string; onChangeText: (value: string) => void; placeholder: string; helper?: string; multiline?: boolean; keyboardType?: "default" | "numeric" | "decimal-pad" }) {
   return (
     <View style={styles.fieldGroup}>
       <Text style={styles.fieldLabel}>{label}</Text>
       {helper ? <Text style={styles.helper}>{helper}</Text> : null}
-      <View style={styles.stepperRow}>
-        <TouchableOpacity accessibilityLabel={`Decrease ${label}`} onPress={() => onChange(Math.max(0, value - 1))} style={styles.stepperButton}>
-          <Text style={styles.stepperText}>−</Text>
-        </TouchableOpacity>
-        <View style={styles.stepperValue}>
-          <Text style={styles.stepperValueText}>{value}</Text>
-          <Text style={styles.stepperSuffix}>{suffix}</Text>
-        </View>
-        <TouchableOpacity accessibilityLabel={`Increase ${label}`} onPress={() => onChange(value + 1)} style={styles.stepperButton}>
-          <Text style={styles.stepperText}>+</Text>
-        </TouchableOpacity>
+      <TextInput value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor="#93A197" style={[styles.input, multiline && styles.textArea]} multiline={multiline} keyboardType={keyboardType} returnKeyType="done" />
+    </View>
+  );
+}
+
+function NumberField({ label, value, onChange, suffix, helper, allowDecimal = false }: { label: string; value: string; onChange: (value: string) => void; suffix: string; helper?: string; allowDecimal?: boolean }) {
+  const numeric = numberOrNull(value) ?? 0;
+  return (
+    <View style={styles.fieldGroup}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      {helper ? <Text style={styles.helper}>{helper}</Text> : null}
+      <View style={styles.numberRow}>
+        <Pressable accessibilityLabel={`Decrease ${label}`} onPress={() => onChange(String(Math.max(0, numeric - (allowDecimal ? 0.5 : 1))))} style={styles.stepperButton}><Text style={styles.stepperText}>−</Text></Pressable>
+        <TextInput value={value} onChangeText={onChange} placeholder="0" placeholderTextColor="#93A197" style={styles.numberInput} keyboardType={allowDecimal ? "decimal-pad" : "numeric"} returnKeyType="done" />
+        <Text style={styles.numberSuffix}>{suffix}</Text>
+        <Pressable accessibilityLabel={`Increase ${label}`} onPress={() => onChange(String(numeric + (allowDecimal ? 0.5 : 1)))} style={styles.stepperButton}><Text style={styles.stepperText}>+</Text></Pressable>
       </View>
     </View>
   );
 }
 
-function StepHeader({ step }: { step: Step }) {
-  if (step === 0 || step === 5) return null;
-  return (
-    <View style={styles.stepHeader}>
-      <Text style={styles.stepLabel}>YOUR CONTEXT</Text>
-      <Text style={styles.stepCount}>{step} of 4</Text>
-      <View style={styles.progressTrack}>
-        <View style={[styles.progressFill, { width: `${step * 25}%` }]} />
-      </View>
-    </View>
-  );
+function StepHeader({ step }: { step: number }) {
+  if (step === 0 || step > 5) return null;
+  return <View style={styles.stepHeader}><Text style={styles.stepLabel}>YOUR CONTEXT</Text><Text style={styles.stepCount}>{step} of 5</Text><View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${step * 20}%` }]} /></View></View>;
 }
 
 export default function HomeScreen() {
   const [profile, setProfile] = useState<UserProfile>(emptyProfile);
-  const [step, setStep] = useState<Step>(0);
+  const [step, setStep] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedDay, setSelectedDay] = useState(0);
+  const [favoriteMealsText, setFavoriteMealsText] = useState("");
+  const [localIngredientsText, setLocalIngredientsText] = useState("");
+  const [otherKitchenText, setOtherKitchenText] = useState("");
+  const [otherResourcesText, setOtherResourcesText] = useState("");
+  const [numbers, setNumbers] = useState<Record<string, string>>({ electricity: "", market: "", steps: "", movement: "", height: "", weight: "", waist: "", hip: "", chest: "" });
 
   useEffect(() => {
-    loadProfile()
-      .then((saved) => {
-        if (saved) {
-          setProfile(saved);
-          setStep(5);
-        }
-      })
-      .finally(() => setIsLoading(false));
+    loadProfile().then((saved) => {
+      if (saved) {
+        setProfile(saved);
+        setFavoriteMealsText(saved.favoriteMeals.join(", "));
+        setLocalIngredientsText(saved.localIngredients.join(", "));
+        setOtherKitchenText(saved.otherKitchenEquipment.join(", "));
+        setOtherResourcesText(saved.otherWorkoutResources.join(", "));
+        setNumbers({ electricity: String(saved.electricityHoursPerDay || ""), market: String(saved.marketMinutesAway || ""), steps: String(saved.dailyStepCount || ""), movement: String(saved.workoutMinutesPerDay || ""), height: saved.heightCm ? String(saved.heightCm) : "", weight: saved.weightKg ? String(saved.weightKg) : "", waist: saved.baselineWaistCm ? String(saved.baselineWaistCm) : "", hip: saved.baselineHipCm ? String(saved.baselineHipCm) : "", chest: saved.baselineChestCm ? String(saved.baselineChestCm) : "" });
+        setStep(6);
+      }
+    }).finally(() => setIsLoading(false));
   }, []);
 
-  const plan = useMemo(() => buildDailyPlan(profile), [profile]);
-  const favoriteMealsText = profile.favoriteMeals.join(", ");
-  const localIngredientsText = profile.localIngredients.join(", ");
+  const weeklyPlan = useMemo(() => buildWeeklyPlan(profile), [profile]);
+  const meal = weeklyPlan.meals[selectedDay];
+  const workout = weeklyPlan.workouts[selectedDay];
 
-  const toggleOption = (key: "kitchenEquipment" | "workoutResources", option: string) => {
-    setProfile((current) => ({
-      ...current,
-      [key]: current[key].includes(option)
-        ? current[key].filter((item) => item !== option)
-        : [...current[key], option],
-    }));
+  const updateNumber = (key: string, rawValue: string, profileKey: keyof UserProfile, limit: number, nullable = false) => {
+    setNumbers((current) => ({ ...current, [key]: rawValue }));
+    const parsed = numberOrNull(rawValue);
+    setProfile((current) => ({ ...current, [profileKey]: parsed === null ? (nullable ? null : 0) : Math.min(limit, parsed) }));
   };
 
+  const toggleOption = (key: "kitchenEquipment" | "workoutResources", option: string) => setProfile((current) => ({ ...current, [key]: current[key].includes(option) ? current[key].filter((item) => item !== option) : [...current[key], option] }));
+
   const continueOnboarding = () => {
-    if (step === 1 && (!profile.city.trim() || profile.electricityHoursPerDay < 1)) {
-      Alert.alert("A little more context", "Add your city and typical daily electricity access so the plan can be practical.");
-      return;
-    }
-    if (step === 2 && (!profile.shoppingFrequency || profile.marketMinutesAway < 1)) {
-      Alert.alert("A little more context", "Select your shopping rhythm and how long a market trip usually takes.");
-      return;
-    }
-    if (step === 3 && profile.favoriteMeals.length === 0) {
-      Alert.alert("Keep your food in the plan", "Add at least one meal you genuinely enjoy.");
-      return;
-    }
-    if (step === 4 && profile.workoutMinutesPerDay < 1) {
-      Alert.alert("Make it fit your day", "Choose the amount of time you can realistically give to movement.");
-      return;
-    }
-    setStep((current) => (current + 1) as Step);
+    if (step === 1 && (!profile.city.trim() || profile.electricityHoursPerDay < 1)) return Alert.alert("A little more context", "Add your city and typical daily electricity access so the plan can stay practical.");
+    if (step === 2 && (!profile.shoppingFrequency || profile.marketMinutesAway < 1)) return Alert.alert("A little more context", "Select your shopping rhythm and how long a market trip usually takes.");
+    if (step === 3 && profile.favoriteMeals.length === 0) return Alert.alert("Keep your food in the plan", "Add at least one meal you genuinely enjoy.");
+    if (step === 4 && profile.workoutMinutesPerDay < 1) return Alert.alert("Make it fit your day", "Choose the amount of time you can realistically give to movement.");
+    if (step === 5 && !profile.goal) return Alert.alert("Choose a starting focus", "Your goal helps us emphasise the right kind of weekly variety.");
+    setStep((current) => current + 1);
   };
 
   const createPlan = async () => {
     setIsSaving(true);
-    try {
-      await saveProfile(profile);
-      setStep(5);
-    } finally {
-      setIsSaving(false);
-    }
+    try { await saveProfile(profile); setStep(6); } finally { setIsSaving(false); }
   };
 
-  const startAgain = async () => {
+  const resetProfile = async () => {
     await clearProfile();
     setProfile(emptyProfile);
+    setFavoriteMealsText(""); setLocalIngredientsText(""); setOtherKitchenText(""); setOtherResourcesText("");
+    setNumbers({ electricity: "", market: "", steps: "", movement: "", height: "", weight: "", waist: "", hip: "", chest: "" });
     setStep(0);
   };
 
-  if (isLoading) {
-    return (
-      <ScreenContainer edges={["top", "bottom", "left", "right"]} style={styles.loadingScreen}>
-        <ActivityIndicator color="#2D6A4F" />
-      </ScreenContainer>
-    );
-  }
+  if (isLoading) return <ScreenContainer edges={["top", "bottom", "left", "right"]} style={styles.loadingScreen}><ActivityIndicator color="#2D6A4F" /></ScreenContainer>;
 
   return (
     <ScreenContainer edges={["top", "bottom", "left", "right"]} style={styles.screen}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.flex}>
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <StepHeader step={step} />
+          {step === 0 ? <View style={styles.hero}><View style={styles.logoMark}><Text style={styles.logoGlyph}>R</Text></View><Text style={styles.eyebrow}>ROOTEDFIT</Text><Text style={styles.heroTitle}>Health plans that live in the real world.</Text><Text style={styles.heroBody}>Your food, power, market access, goals, body context, and household resources all shape your plan.</Text><View style={styles.promiseCard}><Text style={styles.promiseTitle}>More realistic than a generic plan.</Text><Text style={styles.promiseBody}>You will receive a varied week of meals, recipes, drinks, movement, and practical shopping guidance—built around what you actually have.</Text></View><PrimaryButton label="Build my weekly plan" onPress={() => setStep(1)} /></View> : null}
 
-          {step === 0 ? (
-            <View style={styles.hero}>
-              <View style={styles.logoMark}><Text style={styles.logoGlyph}>R</Text></View>
-              <Text style={styles.eyebrow}>ROOTEDFIT</Text>
-              <Text style={styles.heroTitle}>Health plans that live in the real world.</Text>
-              <Text style={styles.heroBody}>Tell us what food, time, power, and equipment you actually have. We will build from there—not from an imagined gym or supermarket.</Text>
-              <View style={styles.promiseCard}>
-                <Text style={styles.promiseTitle}>Your favourites stay on the table.</Text>
-                <Text style={styles.promiseBody}>We help with portions, pairings, preparation, and food storage without calling familiar meals “bad.”</Text>
-              </View>
-              <PrimaryButton label="Build my realistic plan" onPress={() => setStep(1)} />
-            </View>
-          ) : null}
+          {step === 1 ? <View style={styles.content}><Text style={styles.title}>Start with your daily reality.</Text><Text style={styles.body}>Electricity and market access shape what can be prepared, stored, and bought without waste.</Text><TextField label="City or community" value={profile.city} onChangeText={(city) => setProfile((current) => ({ ...current, city }))} placeholder="e.g. Accra" /><NumberField label="Typical electricity access" value={numbers.electricity} onChange={(value) => updateNumber("electricity", value, "electricityHoursPerDay", 24)} suffix="hours each day" helper="You can type a number directly or use the controls." /></View> : null}
 
-          {step === 1 ? (
-            <View style={styles.content}>
-              <Text style={styles.title}>Start with your daily reality.</Text>
-              <Text style={styles.body}>Electricity shapes what can be safely stored and when food can be prepared.</Text>
-              <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>City or community</Text>
-                <TextInput value={profile.city} onChangeText={(city) => setProfile((current) => ({ ...current, city }))} placeholder="e.g. Accra" placeholderTextColor="#93A197" style={styles.input} returnKeyType="done" />
-              </View>
-              <NumericField label="Typical electricity access" value={profile.electricityHoursPerDay} onChange={(electricityHoursPerDay) => setProfile((current) => ({ ...current, electricityHoursPerDay: Math.min(24, electricityHoursPerDay) }))} suffix="hours each day" helper="An estimate is enough. We use it to avoid meal-prep assumptions that do not fit." />
-            </View>
-          ) : null}
+          {step === 2 ? <View style={styles.content}><Text style={styles.title}>What does your kitchen have?</Text><Text style={styles.body}>Select everything available—not just what you use most. The plan only uses equipment you list.</Text><NumberField label="Travel time to your usual market" value={numbers.market} onChange={(value) => updateNumber("market", value, "marketMinutesAway", 600)} suffix="minutes away" /><Text style={styles.fieldLabel}>How often do you usually shop?</Text><View style={styles.choiceStack}>{["Daily", "Weekly", "Every two weeks", "Monthly"].map((label, index) => <ChoiceButton key={label} label={label} selected={profile.shoppingFrequency === (["daily", "weekly", "biweekly", "monthly"] as ShoppingFrequency[])[index]} onPress={() => setProfile((current) => ({ ...current, shoppingFrequency: (["daily", "weekly", "biweekly", "monthly"] as ShoppingFrequency[])[index] }))} />)}</View><Text style={styles.fieldLabel}>Kitchen equipment you have</Text><Text style={styles.helper}>Choose all that apply, then add anything else below.</Text><View style={styles.choiceStack}>{KITCHEN_OPTIONS.map((option) => <ChoiceButton key={option} label={option} selected={profile.kitchenEquipment.includes(option)} onPress={() => toggleOption("kitchenEquipment", option)} />)}</View><TextField label="Other kitchen equipment" value={otherKitchenText} onChangeText={(value) => { setOtherKitchenText(value); setProfile((current) => ({ ...current, otherKitchenEquipment: splitList(value) })); }} placeholder="e.g. solar cooker, charcoal stove" helper="Separate items with commas. Your typing stays intact while you enter each item." /></View> : null}
 
-          {step === 2 ? (
-            <View style={styles.content}>
-              <Text style={styles.title}>What does cooking and shopping look like?</Text>
-              <Text style={styles.body}>We will only recommend preparation methods and storage patterns that match your home.</Text>
-              <NumericField label="Travel time to your usual market" value={profile.marketMinutesAway} onChange={(marketMinutesAway) => setProfile((current) => ({ ...current, marketMinutesAway: marketMinutesAway }))} suffix="minutes away" />
-              <Text style={styles.fieldLabel}>How often do you usually shop?</Text>
-              <View style={styles.choiceStack}>
-                <ChoiceButton label="Daily" selected={profile.shoppingFrequency === "daily"} onPress={() => setProfile((current) => ({ ...current, shoppingFrequency: "daily" }))} />
-                <ChoiceButton label="Weekly" selected={profile.shoppingFrequency === "weekly"} onPress={() => setProfile((current) => ({ ...current, shoppingFrequency: "weekly" }))} />
-                <ChoiceButton label="Every two weeks" selected={profile.shoppingFrequency === "biweekly"} onPress={() => setProfile((current) => ({ ...current, shoppingFrequency: "biweekly" }))} />
-                <ChoiceButton label="Monthly" selected={profile.shoppingFrequency === "monthly"} onPress={() => setProfile((current) => ({ ...current, shoppingFrequency: "monthly" }))} />
-              </View>
-              <Text style={styles.fieldLabel}>Kitchen equipment you use</Text>
-              <View style={styles.choiceStack}>
-                <ChoiceButton label="Fridge" selected={profile.kitchenEquipment.includes("Fridge")} onPress={() => toggleOption("kitchenEquipment", "Fridge")} />
-                <ChoiceButton label="Microwave" selected={profile.kitchenEquipment.includes("Microwave")} onPress={() => toggleOption("kitchenEquipment", "Microwave")} />
-                <ChoiceButton label="Air fryer" selected={profile.kitchenEquipment.includes("Air fryer")} onPress={() => toggleOption("kitchenEquipment", "Air fryer")} />
-                <ChoiceButton label="Stove" selected={profile.kitchenEquipment.includes("Stove")} onPress={() => toggleOption("kitchenEquipment", "Stove")} />
-              </View>
-            </View>
-          ) : null}
+          {step === 3 ? <View style={styles.content}><Text style={styles.title}>Let’s keep food familiar.</Text><Text style={styles.body}>There is no “good food / bad food” quiz. Start with meals and ingredients you can truly find.</Text><TextField label="Meals you enjoy" value={favoriteMealsText} onChangeText={(value) => { setFavoriteMealsText(value); setProfile((current) => ({ ...current, favoriteMeals: splitList(value) })); }} placeholder="e.g. yam, rice, pepper soup" helper="Separate meals with commas. We keep the text you are typing and use these meals across your week." multiline /><TextField label="Ingredients usually within reach" value={localIngredientsText} onChangeText={(value) => { setLocalIngredientsText(value); setProfile((current) => ({ ...current, localIngredients: splitList(value) })); }} placeholder="e.g. carrots, cucumbers, beans" helper="Separate ingredients with commas. Add fresh, dried, canned, or seasonal items." multiline /><TextField label="Dietary notes (optional)" value={profile.dietaryNotes} onChangeText={(dietaryNotes) => setProfile((current) => ({ ...current, dietaryNotes }))} placeholder="e.g. vegetarian, avoid peanuts, no preference" helper="Use this to flag a preference or allergy for later professional review; this MVP does not replace medical advice." multiline /></View> : null}
 
-          {step === 3 ? (
-            <View style={styles.content}>
-              <Text style={styles.title}>Let’s keep food familiar.</Text>
-              <Text style={styles.body}>There is no “good food / bad food” quiz. Start with meals and ingredients you can actually find.</Text>
-              <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Meals you enjoy</Text>
-                <Text style={styles.helper}>Separate ideas with commas, such as yam, rice, pepper soup.</Text>
-                <TextInput value={favoriteMealsText} onChangeText={(value) => setProfile((current) => ({ ...current, favoriteMeals: splitList(value) }))} placeholder="Your favourite meals" placeholderTextColor="#93A197" style={[styles.input, styles.textArea]} multiline />
-              </View>
-              <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Ingredients usually within reach</Text>
-                <Text style={styles.helper}>For example: carrots, cucumbers, beans, plantain.</Text>
-                <TextInput value={localIngredientsText} onChangeText={(value) => setProfile((current) => ({ ...current, localIngredients: splitList(value) }))} placeholder="Local ingredients" placeholderTextColor="#93A197" style={[styles.input, styles.textArea]} multiline />
-              </View>
-            </View>
-          ) : null}
+          {step === 4 ? <View style={styles.content}><Text style={styles.title}>Movement should fit your home too.</Text><Text style={styles.body}>Type what is realistic for a normal day. The weekly plan will rotate toning, Pilates-inspired core, mobility, walking, and recovery options.</Text><NumberField label="Usual daily step count" value={numbers.steps} onChange={(value) => updateNumber("steps", value, "dailyStepCount", 100000)} suffix="steps" helper="Type your estimate directly. You can also adjust it in the tracking page later." /><NumberField label="Time you can give to movement" value={numbers.movement} onChange={(value) => updateNumber("movement", value, "workoutMinutesPerDay", 180)} suffix="minutes daily" /><Text style={styles.fieldLabel}>Resources you have at home</Text><Text style={styles.helper}>Select everything available, including simple household items.</Text><View style={styles.choiceStack}>{RESOURCE_OPTIONS.map((option) => <ChoiceButton key={option} label={option} selected={profile.workoutResources.includes(option)} onPress={() => toggleOption("workoutResources", option)} />)}</View><TextField label="Other movement resources" value={otherResourcesText} onChangeText={(value) => { setOtherResourcesText(value); setProfile((current) => ({ ...current, otherWorkoutResources: splitList(value) })); }} placeholder="e.g. backpack, park nearby" helper="Separate items with commas." /></View> : null}
 
-          {step === 4 ? (
-            <View style={styles.content}>
-              <Text style={styles.title}>Movement should fit too.</Text>
-              <Text style={styles.body}>Your first routine will use the time, space, and resources already available to you.</Text>
-              <NumericField label="Usual daily step count" value={profile.dailyStepCount} onChange={(dailyStepCount) => setProfile((current) => ({ ...current, dailyStepCount: dailyStepCount + (dailyStepCount < 500 ? 500 : 0) }))} suffix="steps" helper="A rough estimate is fine. Tap + to add 500 steps at a time." />
-              <NumericField label="Time you can give to movement" value={profile.workoutMinutesPerDay} onChange={(workoutMinutesPerDay) => setProfile((current) => ({ ...current, workoutMinutesPerDay: Math.min(120, workoutMinutesPerDay) }))} suffix="minutes daily" />
-              <Text style={styles.fieldLabel}>Resources at home</Text>
-              <View style={styles.choiceStack}>
-                <ChoiceButton label="Yoga mat" selected={profile.workoutResources.includes("Yoga mat")} onPress={() => toggleOption("workoutResources", "Yoga mat")} />
-                <ChoiceButton label="Internet for video workouts" selected={profile.workoutResources.includes("Internet for video workouts")} onPress={() => toggleOption("workoutResources", "Internet for video workouts")} />
-                <ChoiceButton label="Weights or filled bottles" selected={profile.workoutResources.includes("Weights or filled bottles")} onPress={() => toggleOption("workoutResources", "Weights or filled bottles")} />
-                <ChoiceButton label="Safe floor space" selected={profile.workoutResources.includes("Safe floor space")} onPress={() => toggleOption("workoutResources", "Safe floor space")} />
-              </View>
-            </View>
-          ) : null}
+          {step === 5 ? <View style={styles.content}><Text style={styles.title}>What would you like to work toward?</Text><Text style={styles.body}>Your goal changes the balance of your weekly plan. Body information is optional, stored on this device in the MVP, and never used to label you or prescribe calories.</Text><Text style={styles.fieldLabel}>Primary focus</Text><View style={styles.choiceStack}>{GOALS.map((goal) => <ChoiceButton key={goal.value} label={goal.label} description={goal.description} selected={profile.goal === goal.value} onPress={() => setProfile((current) => ({ ...current, goal: goal.value }))} />)}</View><TextField label="Gender identity (optional)" value={profile.genderIdentity === "Prefer not to say" ? "" : profile.genderIdentity} onChangeText={(genderIdentity) => setProfile((current) => ({ ...current, genderIdentity: genderIdentity || "Prefer not to say" }))} placeholder="How do you describe your gender?" helper="This is optional and is not used to restrict food or workout choices." /><NumberField label="Height (optional)" value={numbers.height} onChange={(value) => updateNumber("height", value, "heightCm", 260, true)} suffix="cm" allowDecimal /><NumberField label="Current weight (optional)" value={numbers.weight} onChange={(value) => updateNumber("weight", value, "weightKg", 500, true)} suffix="kg" allowDecimal /><Text style={styles.sectionTitle}>Optional baseline measurements</Text><Text style={styles.helper}>These support weekly trend tracking. Leave any field blank if it is not useful to you.</Text><NumberField label="Waist" value={numbers.waist} onChange={(value) => updateNumber("waist", value, "baselineWaistCm", 300, true)} suffix="cm" allowDecimal /><NumberField label="Hip" value={numbers.hip} onChange={(value) => updateNumber("hip", value, "baselineHipCm", 300, true)} suffix="cm" allowDecimal /><NumberField label="Chest" value={numbers.chest} onChange={(value) => updateNumber("chest", value, "baselineChestCm", 300, true)} suffix="cm" allowDecimal /></View> : null}
 
-          {step === 5 ? (
-            <View style={styles.dashboard}>
-              <Text style={styles.eyebrow}>TODAY’S ROOTED PLAN</Text>
-              <Text style={styles.dashboardTitle}>A plan that starts where you are.</Text>
-              <Text style={styles.dashboardIntro}>{plan.contextLine}</Text>
-              <View style={[styles.planCard, styles.energyCard]}>
-                <Text style={styles.cardKicker}>POWER & STORAGE</Text>
-                <Text style={styles.cardText}>{plan.electricityNote}</Text>
-              </View>
-              <View style={styles.planCard}>
-                <Text style={styles.cardKicker}>MEAL IDEA</Text>
-                <Text style={styles.cardTitle}>{plan.mealTitle}</Text>
-                <Text style={styles.cardText}>{plan.mealDescription}</Text>
-                <View style={styles.noteBox}><Text style={styles.noteText}>{plan.mealSafetyNote}</Text></View>
-              </View>
-              <View style={styles.planCard}>
-                <Text style={styles.cardKicker}>SHOPPING RHYTHM</Text>
-                <Text style={styles.cardText}>{plan.shoppingNote}</Text>
-              </View>
-              <View style={[styles.planCard, styles.movementCard]}>
-                <Text style={styles.cardKicker}>MOVEMENT</Text>
-                <Text style={styles.cardTitle}>{plan.workoutTitle}</Text>
-                <Text style={styles.cardText}>{plan.workoutDescription}</Text>
-                <Text style={styles.cardFootnote}>{plan.workoutReason}</Text>
-              </View>
-              <TouchableOpacity onPress={startAgain} accessibilityRole="button" style={styles.textButton}>
-                <Text style={styles.textButtonLabel}>Reset the demo profile</Text>
-              </TouchableOpacity>
-            </View>
-          ) : null}
+          {step === 6 ? <View style={styles.plan}><Text style={styles.eyebrow}>YOUR ROOTED WEEK</Text><Text style={styles.dashboardTitle}>{weeklyPlan.goalTitle}</Text><Text style={styles.dashboardIntro}>{weeklyPlan.goalMessage}</Text><View style={styles.planCard}><Text style={styles.cardKicker}>POWER & STORAGE</Text><Text style={styles.cardText}>{weeklyPlan.electricityNote}</Text></View><Text style={styles.sectionTitle}>Your 7-day rhythm</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.daySelector}>{weeklyPlan.meals.map((item, index) => <Pressable key={item.label} onPress={() => setSelectedDay(index)} style={[styles.dayChip, selectedDay === index && styles.dayChipActive]}><Text style={[styles.dayChipText, selectedDay === index && styles.dayChipTextActive]}>{item.label}</Text></Pressable>)}</ScrollView><View style={styles.planCard}><Text style={styles.cardKicker}>MEAL IDEA · {meal.label.toUpperCase()}</Text><Text style={styles.cardTitle}>{meal.title}</Text><Text style={styles.cardSubhead}>{meal.focus}</Text><Text style={styles.cardText}>What you may need: {meal.ingredients.join(" • ")}</Text><Text style={styles.recipeHeading}>DIY recipe</Text>{meal.steps.map((item, index) => <Text key={item} style={styles.recipeStep}>{index + 1}. {item}</Text>)}<View style={styles.noteBox}><Text style={styles.noteText}>{meal.equipmentNote}</Text></View><Text style={styles.drinkText}>Drink idea: {meal.drink}</Text><Text style={styles.storageText}>{meal.storageNote}</Text></View><View style={[styles.planCard, styles.movementCard]}><Text style={styles.cardKicker}>MOVEMENT · {workout.category.toUpperCase()}</Text><Text style={styles.cardTitle}>{workout.title}</Text><Text style={styles.cardSubhead}>{workout.durationMinutes} minutes, adjusted to your stated time</Text>{workout.instructions.map((item, index) => <Text key={item} style={styles.recipeStep}>{index + 1}. {item}</Text>)}<Text style={styles.cardFootnote}>{workout.adaptation}</Text></View><View style={styles.planCard}><Text style={styles.cardKicker}>WEEKLY SHOPPING LIST</Text>{weeklyPlan.shoppingGroups.map((group) => <View key={group.title} style={styles.shoppingGroup}><Text style={styles.shoppingTitle}>{group.title}</Text>{group.items.map((item) => <Text key={item} style={styles.shoppingItem}>• {item}</Text>)}</View>)}</View><View style={styles.safetyCard}><Text style={styles.safetyText}>{weeklyPlan.safetyNote}</Text></View><Pressable onPress={() => setStep(1)} style={styles.textButton}><Text style={styles.textButtonLabel}>Edit my plan details</Text></Pressable><Pressable onPress={resetProfile} style={styles.textButton}><Text style={styles.textButtonLabel}>Reset local demo profile</Text></Pressable></View> : null}
         </ScrollView>
-
-        {step > 0 && step < 5 ? (
-          <View style={styles.footer}>
-            <TouchableOpacity onPress={() => setStep((current) => (current - 1) as Step)} accessibilityRole="button" style={styles.backButton}>
-              <Text style={styles.backButtonText}>Back</Text>
-            </TouchableOpacity>
-            {step === 4 ? <PrimaryButton label={isSaving ? "Creating your plan…" : "Create my plan"} onPress={createPlan} disabled={isSaving} /> : <PrimaryButton label="Continue" onPress={continueOnboarding} />}
-          </View>
-        ) : null}
+        {step > 0 && step < 6 ? <View style={styles.footer}><Pressable onPress={() => setStep((current) => current - 1)} style={styles.backButton}><Text style={styles.backButtonText}>Back</Text></Pressable>{step === 5 ? <PrimaryButton label={isSaving ? "Creating your week…" : "Create my weekly plan"} onPress={createPlan} disabled={isSaving} /> : <PrimaryButton label="Continue" onPress={continueOnboarding} />}</View> : null}
       </KeyboardAvoidingView>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: "#F8F6EF" },
-  loadingScreen: { alignItems: "center", backgroundColor: "#F8F6EF", justifyContent: "center" },
-  flex: { flex: 1 },
-  scrollContent: { flexGrow: 1, paddingHorizontal: 22, paddingVertical: 18 },
-  stepHeader: { marginBottom: 26 },
-  stepLabel: { color: "#2D6A4F", fontSize: 11, fontWeight: "800", letterSpacing: 1.2 },
-  stepCount: { color: "#6B7A70", fontSize: 13, fontWeight: "600", marginTop: 6 },
-  progressTrack: { backgroundColor: "#DDE5DA", borderRadius: 10, height: 6, marginTop: 12, overflow: "hidden" },
-  progressFill: { backgroundColor: "#2D6A4F", borderRadius: 10, height: "100%" },
-  hero: { flex: 1, justifyContent: "center", paddingVertical: 24 },
-  logoMark: { alignItems: "center", backgroundColor: "#2D6A4F", borderRadius: 18, height: 56, justifyContent: "center", marginBottom: 20, width: 56 },
-  logoGlyph: { color: "#F8F6EF", fontSize: 27, fontWeight: "800" },
-  eyebrow: { color: "#2D6A4F", fontSize: 11, fontWeight: "800", letterSpacing: 1.4, marginBottom: 11 },
-  heroTitle: { color: "#1F2A25", fontSize: 36, fontWeight: "800", letterSpacing: -0.8, lineHeight: 42, maxWidth: 350 },
-  heroBody: { color: "#526259", fontSize: 17, lineHeight: 26, marginTop: 18, maxWidth: 360 },
-  promiseCard: { backgroundColor: "#E6F1E7", borderColor: "#C9DFC9", borderRadius: 18, borderWidth: 1, marginBottom: 30, marginTop: 30, padding: 18 },
-  promiseTitle: { color: "#2D6A4F", fontSize: 16, fontWeight: "800", lineHeight: 22 },
-  promiseBody: { color: "#526259", fontSize: 14, lineHeight: 20, marginTop: 7 },
-  content: { paddingBottom: 100 },
-  title: { color: "#1F2A25", fontSize: 30, fontWeight: "800", letterSpacing: -0.5, lineHeight: 36 },
-  body: { color: "#526259", fontSize: 16, lineHeight: 24, marginBottom: 28, marginTop: 12 },
-  fieldGroup: { marginBottom: 26 },
-  fieldLabel: { color: "#1F2A25", fontSize: 15, fontWeight: "800", lineHeight: 21, marginBottom: 8 },
-  helper: { color: "#6B7A70", fontSize: 13, lineHeight: 19, marginBottom: 10 },
-  input: { backgroundColor: "#FFFFFF", borderColor: "#DDE5DA", borderRadius: 14, borderWidth: 1, color: "#1F2A25", fontSize: 16, minHeight: 52, paddingHorizontal: 15, paddingVertical: 13 },
-  textArea: { minHeight: 110, textAlignVertical: "top" },
-  stepperRow: { alignItems: "center", flexDirection: "row", gap: 12 },
-  stepperButton: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#DDE5DA", borderRadius: 16, borderWidth: 1, height: 52, justifyContent: "center", width: 52 },
-  stepperText: { color: "#2D6A4F", fontSize: 25, fontWeight: "700", lineHeight: 27 },
-  stepperValue: { alignItems: "center", backgroundColor: "#EAF3EA", borderRadius: 16, flex: 1, justifyContent: "center", minHeight: 52, paddingHorizontal: 8 },
-  stepperValueText: { color: "#1F2A25", fontSize: 19, fontWeight: "800" },
-  stepperSuffix: { color: "#6B7A70", fontSize: 11, marginTop: 1 },
-  choiceStack: { gap: 9, marginBottom: 23 },
-  choice: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#DDE5DA", borderRadius: 14, borderWidth: 1, flexDirection: "row", minHeight: 50, paddingHorizontal: 15 },
-  choiceSelected: { backgroundColor: "#EAF3EA", borderColor: "#2D6A4F" },
-  choicePressed: { opacity: 0.74 },
-  choiceText: { color: "#385046", fontSize: 15, fontWeight: "600" },
-  choiceTextSelected: { color: "#1D583E", fontWeight: "800" },
-  footer: { alignItems: "center", backgroundColor: "#F8F6EF", borderTopColor: "#DDE5DA", borderTopWidth: 1, flexDirection: "row", gap: 12, paddingHorizontal: 22, paddingVertical: 14 },
-  backButton: { alignItems: "center", justifyContent: "center", minHeight: 52, paddingHorizontal: 10 },
-  backButtonText: { color: "#2D6A4F", fontSize: 15, fontWeight: "800" },
-  primaryButton: { alignItems: "center", backgroundColor: "#2D6A4F", borderRadius: 15, flex: 1, justifyContent: "center", minHeight: 54, paddingHorizontal: 16 },
-  buttonDisabled: { backgroundColor: "#8AA693" },
-  buttonPressed: { opacity: 0.9, transform: [{ scale: 0.98 }] },
-  primaryButtonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "800" },
-  dashboard: { paddingBottom: 25 },
-  dashboardTitle: { color: "#1F2A25", fontSize: 30, fontWeight: "800", letterSpacing: -0.5, lineHeight: 36 },
-  dashboardIntro: { color: "#526259", fontSize: 16, lineHeight: 24, marginBottom: 22, marginTop: 10 },
-  planCard: { backgroundColor: "#FFFFFF", borderColor: "#DDE5DA", borderRadius: 18, borderWidth: 1, marginBottom: 14, padding: 18 },
-  energyCard: { backgroundColor: "#FCF3E7", borderColor: "#E8D1A4" },
-  movementCard: { backgroundColor: "#EEF5EF", borderColor: "#C9DFC9" },
-  cardKicker: { color: "#2D6A4F", fontSize: 11, fontWeight: "800", letterSpacing: 1.1, marginBottom: 8 },
-  cardTitle: { color: "#1F2A25", fontSize: 19, fontWeight: "800", lineHeight: 25, marginBottom: 8 },
-  cardText: { color: "#405247", fontSize: 15, lineHeight: 22 },
-  noteBox: { backgroundColor: "#F8F6EF", borderRadius: 11, marginTop: 14, padding: 12 },
-  noteText: { color: "#526259", fontSize: 13, fontWeight: "600", lineHeight: 19 },
-  cardFootnote: { color: "#526259", fontSize: 13, lineHeight: 19, marginTop: 13 },
-  textButton: { alignItems: "center", minHeight: 48, padding: 8 },
-  textButtonLabel: { color: "#2D6A4F", fontSize: 14, fontWeight: "800", textDecorationLine: "underline" },
+  screen: { backgroundColor: "#F8F6EF" }, loadingScreen: { alignItems: "center", backgroundColor: "#F8F6EF", justifyContent: "center" }, flex: { flex: 1 }, scrollContent: { flexGrow: 1, paddingHorizontal: 22, paddingVertical: 18 },
+  stepHeader: { marginBottom: 26 }, stepLabel: { color: "#2D6A4F", fontSize: 11, fontWeight: "800", letterSpacing: 1.2 }, stepCount: { color: "#6B7A70", fontSize: 13, fontWeight: "600", marginTop: 6 }, progressTrack: { backgroundColor: "#DDE5DA", borderRadius: 10, height: 6, marginTop: 12, overflow: "hidden" }, progressFill: { backgroundColor: "#2D6A4F", borderRadius: 10, height: "100%" },
+  hero: { flex: 1, justifyContent: "center", paddingVertical: 24 }, logoMark: { alignItems: "center", backgroundColor: "#2D6A4F", borderRadius: 18, height: 56, justifyContent: "center", marginBottom: 20, width: 56 }, logoGlyph: { color: "#F8F6EF", fontSize: 27, fontWeight: "800" }, eyebrow: { color: "#2D6A4F", fontSize: 11, fontWeight: "800", letterSpacing: 1.4, marginBottom: 11 }, heroTitle: { color: "#1F2A25", fontSize: 36, fontWeight: "800", letterSpacing: -0.8, lineHeight: 42, maxWidth: 350 }, heroBody: { color: "#526259", fontSize: 17, lineHeight: 26, marginTop: 18, maxWidth: 360 }, promiseCard: { backgroundColor: "#E6F1E7", borderColor: "#C9DFC9", borderRadius: 18, borderWidth: 1, marginBottom: 30, marginTop: 30, padding: 18 }, promiseTitle: { color: "#2D6A4F", fontSize: 16, fontWeight: "800", lineHeight: 22 }, promiseBody: { color: "#526259", fontSize: 14, lineHeight: 20, marginTop: 7 },
+  content: { paddingBottom: 100 }, title: { color: "#1F2A25", fontSize: 30, fontWeight: "800", letterSpacing: -0.5, lineHeight: 36 }, body: { color: "#526259", fontSize: 16, lineHeight: 24, marginBottom: 28, marginTop: 12 }, fieldGroup: { marginBottom: 24 }, fieldLabel: { color: "#1F2A25", fontSize: 15, fontWeight: "800", lineHeight: 21, marginBottom: 8 }, helper: { color: "#6B7A70", fontSize: 13, lineHeight: 19, marginBottom: 10 }, input: { backgroundColor: "#FFFFFF", borderColor: "#DDE5DA", borderRadius: 14, borderWidth: 1, color: "#1F2A25", fontSize: 16, minHeight: 52, paddingHorizontal: 15, paddingVertical: 13 }, textArea: { minHeight: 104, textAlignVertical: "top" }, numberRow: { alignItems: "center", flexDirection: "row", gap: 9 }, stepperButton: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#DDE5DA", borderRadius: 15, borderWidth: 1, height: 52, justifyContent: "center", width: 48 }, stepperText: { color: "#2D6A4F", fontSize: 25, fontWeight: "700", lineHeight: 28 }, numberInput: { backgroundColor: "#FFFFFF", borderColor: "#DDE5DA", borderRadius: 14, borderWidth: 1, color: "#1F2A25", flex: 1, fontSize: 17, fontWeight: "700", height: 52, paddingHorizontal: 14 }, numberSuffix: { color: "#526259", fontSize: 13, fontWeight: "700", minWidth: 54 },
+  choiceStack: { gap: 9, marginBottom: 23 }, choice: { backgroundColor: "#FFFFFF", borderColor: "#DDE5DA", borderRadius: 14, borderWidth: 1, minHeight: 50, paddingHorizontal: 15, paddingVertical: 13 }, choiceSelected: { backgroundColor: "#EAF3EA", borderColor: "#2D6A4F" }, choicePressed: { opacity: 0.74 }, choiceCopy: { flex: 1 }, choiceText: { color: "#385046", fontSize: 15, fontWeight: "600" }, choiceTextSelected: { color: "#1D583E", fontWeight: "800" }, choiceDescription: { color: "#6B7A70", fontSize: 12, lineHeight: 17, marginTop: 4 }, sectionTitle: { color: "#1F2A25", fontSize: 20, fontWeight: "800", lineHeight: 27, marginBottom: 8, marginTop: 6 },
+  footer: { alignItems: "center", backgroundColor: "#F8F6EF", borderTopColor: "#DDE5DA", borderTopWidth: 1, flexDirection: "row", gap: 12, paddingHorizontal: 22, paddingVertical: 14 }, backButton: { alignItems: "center", justifyContent: "center", minHeight: 52, paddingHorizontal: 10 }, backButtonText: { color: "#2D6A4F", fontSize: 15, fontWeight: "800" }, primaryButton: { alignItems: "center", backgroundColor: "#2D6A4F", borderRadius: 15, flex: 1, justifyContent: "center", minHeight: 54, paddingHorizontal: 16 }, buttonDisabled: { backgroundColor: "#8AA693" }, buttonPressed: { opacity: 0.9, transform: [{ scale: 0.98 }] }, primaryButtonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "800" },
+  plan: { paddingBottom: 24 }, dashboardTitle: { color: "#1F2A25", fontSize: 30, fontWeight: "800", letterSpacing: -0.5, lineHeight: 36 }, dashboardIntro: { color: "#526259", fontSize: 16, lineHeight: 24, marginBottom: 22, marginTop: 10 }, daySelector: { gap: 8, marginBottom: 16 }, dayChip: { backgroundColor: "#FFFFFF", borderColor: "#DDE5DA", borderRadius: 14, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 10 }, dayChipActive: { backgroundColor: "#2D6A4F", borderColor: "#2D6A4F" }, dayChipText: { color: "#385046", fontSize: 13, fontWeight: "800" }, dayChipTextActive: { color: "#FFFFFF" }, planCard: { backgroundColor: "#FFFFFF", borderColor: "#DDE5DA", borderRadius: 18, borderWidth: 1, marginBottom: 14, padding: 18 }, movementCard: { backgroundColor: "#EEF5EF", borderColor: "#C9DFC9" }, cardKicker: { color: "#2D6A4F", fontSize: 11, fontWeight: "800", letterSpacing: 1.1, marginBottom: 8 }, cardTitle: { color: "#1F2A25", fontSize: 19, fontWeight: "800", lineHeight: 25, marginBottom: 6 }, cardSubhead: { color: "#6B7A70", fontSize: 13, fontWeight: "700", lineHeight: 19, marginBottom: 10 }, cardText: { color: "#405247", fontSize: 15, lineHeight: 22 }, recipeHeading: { color: "#1F2A25", fontSize: 15, fontWeight: "800", marginBottom: 7, marginTop: 15 }, recipeStep: { color: "#405247", fontSize: 14, lineHeight: 21, marginBottom: 7 }, noteBox: { backgroundColor: "#F8F6EF", borderRadius: 11, marginTop: 12, padding: 12 }, noteText: { color: "#526259", fontSize: 13, fontWeight: "600", lineHeight: 19 }, drinkText: { color: "#2D6A4F", fontSize: 14, fontWeight: "700", lineHeight: 20, marginTop: 13 }, storageText: { color: "#9A4A35", fontSize: 13, lineHeight: 19, marginTop: 10 }, cardFootnote: { color: "#526259", fontSize: 13, lineHeight: 19, marginTop: 13 }, shoppingGroup: { borderTopColor: "#E5EBE3", borderTopWidth: 1, marginTop: 12, paddingTop: 12 }, shoppingTitle: { color: "#1F2A25", fontSize: 15, fontWeight: "800", marginBottom: 5 }, shoppingItem: { color: "#526259", fontSize: 14, lineHeight: 21 }, safetyCard: { backgroundColor: "#FCF3E7", borderColor: "#E8D1A4", borderRadius: 16, borderWidth: 1, marginBottom: 10, padding: 16 }, safetyText: { color: "#6B4A2C", fontSize: 13, lineHeight: 19 }, textButton: { alignItems: "center", minHeight: 48, padding: 8 }, textButtonLabel: { color: "#2D6A4F", fontSize: 14, fontWeight: "800", textDecorationLine: "underline" },
 });
