@@ -83,3 +83,6 @@
 - [x] Review RootedFit’s existing Expo web build for tester-facing browser responsiveness and presentation gaps
 - [x] Adapt the existing local-first RootedFit flows for practical browser testing without changing meal, infrastructure, or workout logic
 - [x] Validate the web build and provide a checkpoint suitable for the user to publish and share with testers
+- [x] Verify react-native-web and react-dom dependencies plus the Expo web export configuration
+- [x] Create and validate the RootedFit production web distribution bundle
+- [x] Save a production-web checkpoint and guide the user to publish it for a live tester URL
