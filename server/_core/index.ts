@@ -3,6 +3,7 @@ import express from "express";
 import { createServer } from "http";
 import net from "net";
 import path from "path";
+import { fileURLToPath } from "url";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { registerStorageProxy } from "./storageProxy";
@@ -75,7 +76,8 @@ async function startServer() {
   // OAuth routes above this fallback, then let browser routes resolve to the
   // exported app shell on built-in hosting.
   if (process.env.NODE_ENV === "production") {
-    const webDist = path.resolve(process.cwd(), "web-dist");
+    const compiledServerDir = path.dirname(fileURLToPath(import.meta.url));
+    const webDist = path.resolve(compiledServerDir, "..", "web-dist");
     app.use(express.static(webDist));
     app.get("*", (req, res, next) => {
       if (req.path.startsWith("/api/")) return next();
