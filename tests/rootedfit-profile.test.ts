@@ -14,7 +14,7 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
-import { applyTodayUnavailableResources, buildWeeklyPlan, categorizeGroceryItems, findSimilarRecipe, formatGroceryChecklistPrintHtml, formatGroceryListExport, loadCheckIns, loadCompletionRatings, loadExerciseLogs, loadGroceryChecklist, loadMealSwaps, loadMeasurements, loadProfile, loadProgressPhotos, loadTodayUnavailableResources, loadWorkoutSessionStates, numberOrNull, practicalGroceryItems, saveCheckIns, saveCompletionRatings, saveExerciseLogs, saveGroceryChecklist, saveMealSwaps, saveMeasurements, saveProfile, saveProgressPhotos, saveTodayUnavailableResources, saveWorkoutSessionStates, splitList, type UserProfile } from "../lib/rootedfit-profile";
+import { applyTodayResourceSubstitutions, applyTodayUnavailableResources, buildWeeklyPlan, buildWorkoutSessionPreview, buildWorkoutWhyToday, categorizeGroceryItems, findSimilarRecipe, formatGroceryChecklistPrintHtml, formatGroceryListExport, getTodayResourceSubstituteOptions, loadCheckIns, loadCompletionRatings, loadExerciseLogs, loadGroceryChecklist, loadMealSwaps, loadMeasurements, loadProfile, loadProgressPhotos, loadResourceChangeFeedback, loadTodayResourceSubstitutions, loadTodayUnavailableResources, loadWorkoutSessionStates, numberOrNull, practicalGroceryItems, saveCheckIns, saveCompletionRatings, saveExerciseLogs, saveGroceryChecklist, saveMealSwaps, saveMeasurements, saveProfile, saveProgressPhotos, saveResourceChangeFeedback, saveTodayResourceSubstitutions, saveTodayUnavailableResources, saveWorkoutSessionStates, splitList, type UserProfile } from "../lib/rootedfit-profile";
 import { suggestedFoods, suggestedFruits, suggestedMeals } from "../lib/food-catalogue";
 
 const microwaveProfile: UserProfile = {
@@ -251,6 +251,30 @@ describe("RootedFit weekly plan builder", () => {
     expect(plan.workouts[0].title).toContain("Chair-supported strength");
     await saveTodayUnavailableResources(["Chair"]);
     await expect(loadTodayUnavailableResources()).resolves.toEqual(["Chair"]);
+  });
+
+  it("offers saved one-tap alternatives and explains the resulting today-only workout choice", async () => {
+    const savedProfile = { ...microwaveProfile, workoutResources: ["Chair", "Resistance band", "Weights or filled bottles", "Internet for video workouts"] };
+    const unavailable = ["Weights or filled bottles"];
+    const option = getTodayResourceSubstituteOptions(savedProfile, unavailable)[0];
+    const substitutions = [{ ...option, chosenAt: "2026-08-13T12:00:00.000Z" }];
+    const todayProfile = applyTodayResourceSubstitutions(savedProfile, unavailable, substitutions);
+    const workout = buildWeeklyPlan(todayProfile).workouts[0];
+    const preview = buildWorkoutSessionPreview(workout);
+
+    expect(option.substituteResource).toBe("Resistance band");
+    expect(workout.title).toContain("Resistance-band strength");
+    expect(buildWorkoutWhyToday(savedProfile, unavailable, workout, substitutions)).toContain("Resistance band instead of Weights or filled bottles");
+    expect(preview.equipment).toContain("Resistance band");
+    expect(preview.setupChecks.join(" ")).toContain("Inspect the resistance band");
+    await saveTodayResourceSubstitutions(substitutions);
+    await expect(loadTodayResourceSubstitutions()).resolves.toEqual(substitutions);
+  });
+
+  it("keeps resource-change tester feedback locally when a beta tester responds to a substitute", async () => {
+    const feedback = [{ id: "resource-feedback-1", changeContext: "Paused weights for today.", outcome: "needs_adjustment" as const, note: "A bodyweight alternative would help.", createdAt: "2026-08-13T12:00:00.000Z", synced: false }];
+    await saveResourceChangeFeedback(feedback);
+    await expect(loadResourceChangeFeedback()).resolves.toEqual(feedback);
   });
 
   it("finds a similar available recipe and organizes the unchanged grocery ingredients by supermarket section", () => {

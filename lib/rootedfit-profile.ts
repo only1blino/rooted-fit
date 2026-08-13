@@ -135,6 +135,10 @@ export type GroceryChecklistItem = { key: string; checked: boolean };
 export type LocalExerciseLog = { id: string; workoutId: string; exerciseName: string; setNumber: number; repCount: number; weightUsedKg: number | null; loggedAt: string };
 export type CompletionRating = { completionKey: string; rating: 1 | 2 | 3 | 4 | 5; ratedAt: string };
 export type TodayUnavailableResources = { date: string; resources: string[] };
+export type TodayResourceSubstitution = { unavailableResource: string; substituteResource: string; chosenAt: string };
+export type TodayResourceSubstitutions = { date: string; substitutions: TodayResourceSubstitution[] };
+export type WorkoutSessionPreview = { label: string; durationMinutes: number; equipment: string[]; setupChecks: string[] };
+export type LocalResourceChangeFeedback = { id: string; changeContext: string; outcome: "helpful" | "needs_adjustment"; note: string; createdAt: string; synced: boolean };
 
 export const profileStorageKey = "rootedfit.profile.v2";
 const legacyProfileStorageKey = "rootedfit.profile.v1";
@@ -148,6 +152,8 @@ export const groceryChecklistStorageKey = "rootedfit.grocery-checklist.v1";
 export const exerciseLogsStorageKey = "rootedfit.exercise-logs.v1";
 export const completionRatingsStorageKey = "rootedfit.completion-ratings.v1";
 export const todayUnavailableResourcesStorageKey = "rootedfit.today-unavailable-resources.v1";
+export const todayResourceSubstitutionsStorageKey = "rootedfit.today-resource-substitutions.v1";
+export const resourceChangeFeedbackStorageKey = "rootedfit.resource-change-feedback.v1";
 
 export const emptyProfile: UserProfile = {
   city: "",
@@ -499,7 +505,7 @@ export async function saveProfile(profile: UserProfile) {
 }
 
 export async function clearProfile() {
-  await AsyncStorage.multiRemove([profileStorageKey, legacyProfileStorageKey, checkInsStorageKey, measurementsStorageKey, progressPhotosStorageKey, mealSwapsStorageKey, workoutSessionsStorageKey, waterLogsStorageKey, groceryChecklistStorageKey, exerciseLogsStorageKey, completionRatingsStorageKey]);
+  await AsyncStorage.multiRemove([profileStorageKey, legacyProfileStorageKey, checkInsStorageKey, measurementsStorageKey, progressPhotosStorageKey, mealSwapsStorageKey, workoutSessionsStorageKey, waterLogsStorageKey, groceryChecklistStorageKey, exerciseLogsStorageKey, completionRatingsStorageKey, todayUnavailableResourcesStorageKey, todayResourceSubstitutionsStorageKey, resourceChangeFeedbackStorageKey]);
 }
 
 export async function loadCheckIns(): Promise<DailyCheckIn[]> {
@@ -611,6 +617,18 @@ export function applyTodayUnavailableResources(profile: UserProfile, unavailable
   return { ...profile, workoutResources: profile.workoutResources.filter(available), otherWorkoutResources: profile.otherWorkoutResources.filter(available) };
 }
 
+/** Applies a chosen today-only substitute as the equipment priority without modifying the saved setup. */
+export function applyTodayResourceSubstitutions(profile: UserProfile, unavailableResources: string[], substitutions: TodayResourceSubstitution[]): UserProfile {
+  const activeProfile = applyTodayUnavailableResources(profile, unavailableResources);
+  if (!substitutions.length) return activeProfile;
+  const selectedSubstitutes = new Set(substitutions.map((substitution) => substitution.substituteResource.toLowerCase()).filter((resource) => resource !== "no equipment"));
+  const utilityResources = new Set(["internet for video workouts", "tv or phone"]);
+  return {
+    ...activeProfile,
+    workoutResources: activeProfile.workoutResources.filter((resource) => utilityResources.has(resource.toLowerCase()) || selectedSubstitutes.has(resource.toLowerCase())),
+  };
+}
+
 export async function loadTodayUnavailableResources(today = formatToday()): Promise<string[]> {
   const saved = await AsyncStorage.getItem(todayUnavailableResourcesStorageKey);
   if (!saved) return [];
@@ -625,6 +643,77 @@ export async function loadTodayUnavailableResources(today = formatToday()): Prom
 export async function saveTodayUnavailableResources(resources: string[], today = formatToday()) {
   const entry: TodayUnavailableResources = { date: today, resources: Array.from(new Set(resources.map((resource) => resource.trim()).filter(Boolean))).slice(0, 20) };
   await AsyncStorage.setItem(todayUnavailableResourcesStorageKey, JSON.stringify(entry));
+}
+
+export async function loadTodayResourceSubstitutions(today = formatToday()): Promise<TodayResourceSubstitution[]> {
+  const saved = await AsyncStorage.getItem(todayResourceSubstitutionsStorageKey);
+  if (!saved) return [];
+  try {
+    const entry = JSON.parse(saved) as TodayResourceSubstitutions;
+    return entry.date === today && Array.isArray(entry.substitutions) ? entry.substitutions : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function saveTodayResourceSubstitutions(substitutions: TodayResourceSubstitution[], today = formatToday()) {
+  const unique = Array.from(new Map(substitutions.map((substitution) => [substitution.unavailableResource.toLowerCase(), substitution])).values()).slice(0, 20);
+  const entry: TodayResourceSubstitutions = { date: today, substitutions: unique };
+  await AsyncStorage.setItem(todayResourceSubstitutionsStorageKey, JSON.stringify(entry));
+}
+
+export async function loadResourceChangeFeedback(): Promise<LocalResourceChangeFeedback[]> {
+  const saved = await AsyncStorage.getItem(resourceChangeFeedbackStorageKey);
+  if (!saved) return [];
+  try { return JSON.parse(saved) as LocalResourceChangeFeedback[]; } catch { return []; }
+}
+
+export async function saveResourceChangeFeedback(feedback: LocalResourceChangeFeedback[]) {
+  await AsyncStorage.setItem(resourceChangeFeedbackStorageKey, JSON.stringify(feedback.slice(0, 100)));
+}
+
+const RESOURCE_SUBSTITUTE_ORDER: Record<string, string[]> = {
+  "weights or filled bottles": ["Resistance band", "Chair", "Safe floor space"],
+  "resistance band": ["Weights or filled bottles", "Chair", "Safe floor space"],
+  "chair": ["Resistance band", "Weights or filled bottles", "Safe floor space"],
+  "yoga mat": ["Safe floor space", "Chair"],
+  "stairs or a sturdy step": ["Skipping rope", "Outdoor walking route", "Safe floor space"],
+  "skipping rope": ["Stairs or a sturdy step", "Outdoor walking route", "Safe floor space"],
+  "outdoor walking route": ["Stairs or a sturdy step", "Skipping rope", "Safe floor space"],
+  "internet for video workouts": ["TV or phone"],
+};
+
+/** Offers a practical, already-saved alternative when a selected item is unavailable today. */
+export function getTodayResourceSubstituteOptions(profile: UserProfile, unavailableResources: string[]): TodayResourceSubstitution[] {
+  const unavailable = new Set(unavailableResources.map((resource) => resource.toLowerCase()));
+  const saved = new Map(profile.workoutResources.map((resource) => [resource.toLowerCase(), resource]));
+  return unavailableResources.map((resource) => {
+    const candidate = (RESOURCE_SUBSTITUTE_ORDER[resource.toLowerCase()] ?? []).map((item) => saved.get(item.toLowerCase())).find((item) => item && !unavailable.has(item.toLowerCase()));
+    return { unavailableResource: resource, substituteResource: candidate ?? "No equipment", chosenAt: new Date().toISOString() };
+  });
+}
+
+/** Produces an explicit explanation of why this exact session is practical today. */
+export function buildWorkoutWhyToday(profile: UserProfile, unavailableResources: string[], workout: WorkoutDay, substitutions: TodayResourceSubstitution[] = []): string {
+  const durableResources = profile.workoutResources.filter((resource) => !["Internet for video workouts", "TV or phone"].includes(resource));
+  const setup = durableResources.length ? sentenceList(durableResources, "your saved home resources") : "your clear space and bodyweight";
+  const used = sentenceList(workout.resourcesUsed, "the resources this session uses");
+  const paused = unavailableResources.length ? ` You paused ${sentenceList(unavailableResources, "a resource")} for today, so it is excluded from this session.` : "";
+  const confirmed = substitutions.length ? ` You confirmed ${substitutions.map((substitution) => `${substitution.substituteResource} instead of ${substitution.unavailableResource}`).join("; ")}.` : "";
+  return `${workout.title} is selected from ${setup} and uses ${used}.${paused}${confirmed}`;
+}
+
+/** Gives a compact, non-clinical setup preview for a later session. */
+export function buildWorkoutSessionPreview(workout: WorkoutDay): WorkoutSessionPreview {
+  const joined = workout.resourcesUsed.join(" ").toLowerCase();
+  const setupChecks = ["Clear enough room to move without bumping furniture."];
+  if (joined.includes("chair")) setupChecks.push("Use a stable, non-wheeled chair that will not slide.");
+  if (joined.includes("band")) setupChecks.push("Inspect the resistance band and keep it controlled at all times.");
+  if (joined.includes("bottle") || joined.includes("weight") || joined.includes("backpack")) setupChecks.push("Secure bottle caps or backpack contents and choose a load you can control.");
+  if (joined.includes("stair") || joined.includes("step")) setupChecks.push("Use the lowest sturdy step first and a rail if one is available.");
+  if (joined.includes("rope")) setupChecks.push("Check overhead and floor clearance before starting rope work.");
+  setupChecks.push("Pause, reduce the range, or choose a gentler movement if anything feels wrong.");
+  return { label: `${workout.label} preview`, durationMinutes: workout.durationMinutes, equipment: workout.resourcesUsed, setupChecks };
 }
 
 export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {

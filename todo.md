@@ -124,3 +124,9 @@
 - [x] Add resource-specific chair, resistance-band, and water-bottle demonstration links
 - [x] Let users mark a saved home resource unavailable for today and adapt the workout locally
 - [x] Add regression coverage and publish the web, Expo, and GitHub resource-control release
+- [x] Verify the beta deployment and test resource filtering, direct gear editing, and today-only availability controls
+- [x] Add a clear “Why this workout today?” rationale that explains selected and unavailable resources
+- [x] Add one-tap practical alternatives for temporarily unavailable gear
+- [x] Add upcoming-session preview cards with duration, required equipment, and safety/setup checks
+- [x] Capture locally stored beta feedback after home-resource changes
+- [x] Add regression tests, validate, publish, and push the enhanced Workouts beta release
