@@ -29,3 +29,8 @@
 - [x] Correct tracker units to support feet/inches with kilograms and centimetres with pounds as requested
 - [x] Make daily motivations and affirmations prominent, varied, and actionable in the tracker
 - [x] Validate and document the final tracker polish update
+- [x] Research and catalogue coherent, authentic DIY meal recipes with clear ingredient quantities and preparation steps
+- [x] Replace generic storage and equipment wording with recipe-specific preparation guidance
+- [x] Add weight-loss and weight-gain options to primary and secondary focus selection
+- [x] Add curated YouTube links for Pilates, yoga, core, booty, and home-toning workout sessions
+- [x] Validate the revised content against source notes and test the updated plan engine

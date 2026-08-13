@@ -54,10 +54,12 @@ describe("RootedFit weekly plan builder", () => {
 
     expect(plan.meals).toHaveLength(7);
     expect(plan.workouts).toHaveLength(7);
-    expect(plan.meals[0].title).toContain("yam and pepper soup");
-    expect(plan.meals[0].equipmentNote).toContain("steam, warm, or reheat");
+    expect(plan.meals[0].title).toContain("Nigerian jollof rice");
+    expect(plan.meals[0].equipmentNote).toContain("microwave-only kitchen");
     expect(plan.meals[0].storageNote).toContain("same-day portions");
     expect(plan.shoppingGroups[0].items).toContain("Beans, lentils, groundnuts, or another shelf-stable protein");
+    expect(plan.workouts[1].videoUrl).toContain("youtube.com");
+    expect(plan.workouts[1].videoTitle).toContain("PILATES");
   });
 
   it("keeps comma-separated field input stable and parses decimal number entries", () => {
@@ -71,7 +73,7 @@ describe("RootedFit weekly plan builder", () => {
     expect(suggestedFoods("Nigeria")).toHaveLength(50);
     expect(suggestedFruits("Nigeria")).toContain("Mango");
     expect(JSON.stringify(plan.meals).toLowerCase()).not.toContain("eggs");
-    expect(plan.meals[0].ingredients[0]).toMatch(/^1 cup prepared/);
+    expect(plan.meals[0].ingredients[0]).toMatch(/^¾ cup parboiled rice/);
   });
 
   it("persists the expanded onboarding profile locally", async () => {

@@ -2,7 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { FoodCountry } from "@/lib/food-catalogue";
 
 export type ShoppingFrequency = "daily" | "weekly" | "biweekly" | "monthly";
-export type WellnessGoal = "consistency" | "energy" | "toning" | "core_mobility" | "body_composition" | null;
+export type WellnessGoal = "consistency" | "energy" | "toning" | "core_mobility" | "body_composition" | "weight_loss" | "weight_gain" | null;
 export type MeasurementUnit = "ft_in_kg" | "cm_lb";
 export type ProgressPhotoAngle = "front" | "side" | "back";
 
@@ -55,6 +55,9 @@ export type WorkoutDay = {
   durationMinutes: number;
   instructions: string[];
   adaptation: string;
+  videoTitle: string;
+  videoUrl: string;
+  videoProvider: string;
 };
 
 export type ShoppingGroup = {
@@ -176,6 +179,10 @@ function goalCopy(goal: WellnessGoal) {
       return { title: "Core and mobility", message: "Your week emphasises gentle core control, posture, and mobility without needing a specialised studio." };
     case "body_composition":
       return { title: "Body-composition habits", message: "Your week focuses on consistent meals, movement, and trend tracking—not restrictive daily targets." };
+    case "weight_loss":
+      return { title: "Weight-loss habits", message: "Your week supports regular meals, satisfying familiar foods, and movement you can repeat without extreme rules." };
+    case "weight_gain":
+      return { title: "Weight-gain habits", message: "Your week supports consistent meals and practical additions that help you meet your energy needs without forcing unfamiliar foods." };
     default:
       return { title: "A consistent routine", message: "Your week is designed around small actions that fit the conditions you described." };
   }
@@ -289,62 +296,48 @@ export async function saveProgressPhotos(photos: ProgressPhoto[]) {
 }
 
 export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
-  const localIngredients = profile.localIngredients.length ? profile.localIngredients : ["a locally available vegetable", "a seasonal fruit", "a protein option"];
-  const meals = profile.favoriteMeals.length ? profile.favoriteMeals : ["a familiar meal you enjoy", "a local staple", "a simple home meal"];
-  const method = cookingMethod(profile);
+  const localIngredients = profile.localIngredients.length ? profile.localIngredients : ["tomato", "onion", "leafy greens"];
   const storageNote = foodStorageNote(profile);
   const goal = goalCopy(profile.goal);
   const durationMinutes = Math.max(10, Math.min(60, profile.workoutMinutesPerDay || 20));
   const labels = ["Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Day 7"];
   const excluded = [...profile.dietaryRestrictions, ...profile.dislikedFoods].map((item) => item.toLowerCase());
-  const allowed = (item: string) => !excluded.some((excludedItem) => item.toLowerCase().includes(excludedItem) || excludedItem.includes(item.toLowerCase()));
-  const protein = ["2 eggs", "¾ cup cooked beans", "1 palm-sized fish portion", "¾ cup tofu", "1 palm-sized chicken portion"].find(allowed) ?? "¾ cup of a protein you have confirmed is suitable";
-  const fruit = profile.favoriteFruits.find(allowed) ?? "a locally available fruit";
-  const mealFocuses = ["Familiar plate, measured ingredients", "Pantry-and-produce bowl", "Vegetable and protein pairing", "Simple lunch or dinner plate", "Comfort food with practical additions", "Market-day fresh meal", "Use-what-you-have reset"];
-  const mealPlan = labels.map((label, index) => {
-    const anchor = cycle(meals, index, "a familiar local meal");
-    const ingredient = cycle(localIngredients, index, "a locally available ingredient");
-    const secondIngredient = cycle(localIngredients, index + 1, "onion or another available vegetable");
-    const portions = [`1 cup prepared ${anchor}`, `1 cup ${ingredient}`, `½ cup ${secondIngredient}`, protein, "1 teaspoon cooking oil or the amount your recipe normally needs"];
-    const pattern = [
-      { title: `${anchor} with ${ingredient} and protein`, steps: [`Set out ${portions[0]}, ${portions[1]}, and ${portions[3]}.`, `${method[0].toUpperCase()}${method.slice(1)} ${ingredient} with the oil and add it beside or into ${anchor}.`, `Prepare ${protein} using only your listed kitchen equipment.`, "Serve the meal while fresh; do not plan leftovers unless you can confirm cold storage is safe."], drink: `Serve safe drinking water with 1 sliced ${fruit} or a fruit portion on the side.` },
-      { title: `${anchor} one-bowl mix`, steps: [`Measure ${portions[0]} and ${portions[1]}.`, `${method[0].toUpperCase()}${method.slice(1)} ${ingredient} and ${secondIngredient} until tender.`, `Stir in or serve with ${protein}; season using flavours you already enjoy.`, "Eat the prepared portion the same day when cold storage is uncertain."], drink: `Make a simple ${fruit} and water drink only when safe water and the equipment are available.` },
-      { title: `Colourful ${anchor} plate`, steps: [`Place ${portions[0]} on a plate or bowl.`, `Add 1 cup ${ingredient} and ½ cup ${secondIngredient} as a cooked or washed fresh side.`, `Add ${protein}.`, "Keep the familiar meal at the centre; the additions are for variety, not replacement."], drink: `Have water, unsweetened tea, or ${fruit} with the meal.` },
-      { title: `${anchor} and ${ingredient} quick recipe`, steps: [`Prepare 1 cup ${anchor} as your household normally would.`, `${method[0].toUpperCase()}${method.slice(1)} 1 cup ${ingredient} with ${secondIngredient}.`, `Add ${protein} and heat until ready to eat.`, "Taste for familiar seasoning and serve immediately."], drink: `Water plus a portion of ${fruit}.` },
-      { title: `Comforting ${anchor} with a practical side`, steps: [`Cook or warm 1 cup ${anchor}.`, `Make a side of 1 cup ${ingredient} and ½ cup ${secondIngredient}.`, `Add ${protein}.`, "Make the same-day quantity that fits your actual power and storage window."], drink: `Water or a freshly prepared ${fruit} drink without treating it as a meal replacement.` },
-      { title: `Fresh-market ${anchor} meal`, steps: [`Use 1 cup ${anchor} with the freshest 1 cup ${ingredient} you can obtain.`, `Add ½ cup ${secondIngredient} for another texture or colour.`, `Prepare ${protein} using your available equipment.`, "Use delicate fresh items first and save durable ingredients for later in the shopping cycle."], drink: `Safe water with ${fruit}, ginger, or citrus if you enjoy it.` },
-      { title: `Flexible ${anchor} reset`, steps: [`Check what you have: 1 cup ${anchor}, 1 cup ${ingredient}, and ½ cup ${secondIngredient}.`, `Choose ${protein} if available and appropriate for your restrictions.`, `${method[0].toUpperCase()}${method.slice(1)} or assemble the ingredients into a simple one-bowl meal.`, "Use it as a realistic no-waste meal, not a perfect-recipe test."], drink: `Your preferred unsweetened drink plus safe drinking water.` },
-    ][index];
-    return {
-      day: index + 1,
-      label,
-      title: pattern.title,
-      focus: mealFocuses[index],
-      ingredients: portions,
-      steps: pattern.steps,
-      drink: pattern.drink,
-      storageNote,
-      equipmentNote: `This suggestion is designed to ${method} with what you selected at home.`,
-    } satisfies MealDay;
-  });
+  const hasStove = profile.kitchenEquipment.some((item) => ["Stove", "Gas burner", "Oven", "Air fryer"].includes(item));
+  const hasMicrowave = profile.kitchenEquipment.includes("Microwave");
+  const avoids = (term: string) => excluded.some((item) => item.includes(term) || term.includes(item));
+  const usesAnimalFoods = !["vegetarian", "vegan", "chicken", "fish", "egg", "meat"].some(avoids);
+  const comfortFood = profile.favoriteMeals[0] || "a favourite family meal";
+  const recipeEquipmentNote = hasStove ? "Use a pot and a frying pan or saucepan. Prep the tomato, onion, and pepper before you turn on the heat so the steps stay simple." : hasMicrowave ? "This dish is best made on a stovetop. With a microwave-only kitchen, choose a microwave-ready egg, oats, rice, or bean option instead of forcing this recipe." : "This dish needs a reliable heat source. Keep it for the next day you can use a shared or household stove, and choose a no-cook or ready-cooked option today.";
+  const fruit = profile.favoriteFruits[0] || "orange, banana, or another fruit you enjoy";
+  const nigeriaRecipes: Omit<MealDay, "day" | "label" | "storageNote" | "equipmentNote">[] = [
+    { title: "Nigerian jollof rice with chicken and cabbage slaw", focus: "A familiar rice meal with a clear one-pot base and fresh crunch", ingredients: ["¾ cup parboiled rice", "2 medium tomatoes", "½ red bell pepper", "½ onion", "1 teaspoon oil", "½ teaspoon curry powder and dried thyme", "1 palm-sized chicken portion", "1 cup shredded cabbage and carrot"], steps: ["Blend the tomatoes, pepper, and half the onion until smooth.", "Fry the remaining onion in the oil for 2 minutes, add the blended mix, curry, thyme, and a pinch of salt; simmer until the sauce thickens.", "Stir in the rice and enough water to come just level with it. Cover and cook on low heat until the rice is tender.", "Cook the chicken separately in the same pan or oven, then serve with the cabbage-and-carrot slaw."], drink: `Serve with water and ${fruit}.` },
+    { title: "Beans porridge with ripe plantain", focus: "A complete one-pot comfort meal using durable beans", ingredients: ["¾ cup brown or black-eyed beans", "½ ripe plantain", "½ onion", "1 tablespoon palm oil or preferred oil", "1 teaspoon ground crayfish (optional)", "1 cup spinach, ugu, or other leafy greens"], steps: ["Rinse the beans and cook in fresh water until they begin to soften.", "Add onion, oil, crayfish if using, and a small pinch of salt; continue cooking until creamy.", "Slice the plantain and add it for the last 10–12 minutes so it softens without disappearing.", "Stir in the greens at the end and serve once they wilt."], drink: "Water or unsweetened zobo made with safe drinking water." },
+    { title: "Yam and egg sauce", focus: "A straightforward breakfast or dinner using a familiar staple", ingredients: ["2 thick slices yam", "2 eggs", "1 medium tomato", "¼ onion", "½ bell pepper", "1 teaspoon oil", "Pinch of curry or dried thyme"], steps: ["Peel the yam, cut into thick pieces, cover with water, and boil until a fork passes through easily.", "Dice the tomato, onion, and pepper.", "Fry the onion and pepper in the oil for 2 minutes, add tomato and cook until it loses its raw smell.", "Beat the eggs with curry or thyme, pour into the sauce, and fold gently until just set. Serve beside the yam."], drink: `Water and a portion of ${fruit}.` },
+    { title: "Efo riro with fish and small semo portion", focus: "Leafy vegetable soup built around the flavour you already know", ingredients: ["2 cups sliced ugu, efo, or spinach", "1 palm-sized fish portion", "1 tomato", "½ red bell pepper", "¼ onion", "1 tablespoon palm oil", "1 small semo portion"], steps: ["Blend tomato, pepper, and onion roughly; cook the mixture in palm oil until it reduces and smells rich.", "Add the fish and a small splash of water; simmer until the fish is cooked through.", "Fold in the greens and cook only until softened and bright.", "Prepare one small semo portion separately and serve with the soup."], drink: "Water or warm unsweetened tea." },
+    { title: "Moi moi with pap and cucumber", focus: "A bean-based meal you can prep from familiar market ingredients", ingredients: ["1 cup peeled beans or bean flour", "¼ onion", "½ red bell pepper", "1 teaspoon oil", "Small piece smoked fish or 1 boiled egg (optional)", "1 cup pap", "½ cucumber"], steps: ["Blend soaked peeled beans, onion, pepper, and enough water to make a thick smooth batter, or mix bean flour according to its packet directions.", "Stir in oil, a small pinch of salt, and the fish or egg if using.", "Pour into heat-safe containers and cook in a covered pot of gently simmering water until firm in the centre.", "Prepare pap with hot water and serve with sliced cucumber."], drink: "Water; pap already counts as part of the meal." },
+    { title: "Catfish pepper soup with boiled sweet potato", focus: "A simple fresh-market meal with a clear cooking sequence", ingredients: ["1 catfish portion", "1 small sweet potato", "½ onion", "1 teaspoon pepper-soup spice", "Fresh pepper to taste", "Handful scent leaf or parsley (optional)"], steps: ["Peel and cube the sweet potato; boil in a separate pot until tender.", "Place fish, onion, pepper-soup spice, and pepper in a pot with enough water to cover the fish.", "Simmer gently until the fish is cooked and the broth tastes seasoned.", "Add scent leaf or parsley at the end and serve with the boiled sweet potato."], drink: "Water; the pepper soup broth is part of the meal." },
+    { title: "Ofada-style rice with tomato stew and vegetables", focus: `A practical version of ${comfortFood} using a separate stew base`, ingredients: ["¾ cup rice", "2 tomatoes", "½ red bell pepper", "½ onion", "1 teaspoon oil", "1 palm-sized chicken or fish portion", "1 cup cabbage, carrot, or green beans"], steps: ["Rinse the rice and cook until tender; drain any excess water.", "Blend tomato, pepper, and onion. Fry in oil until the sauce thickens and the colour deepens.", "Cook the chicken or fish separately, then spoon some of the stew over it.", "Quickly sauté or boil the vegetables and serve them beside the rice and stew."], drink: `Water with a serving of ${fruit} later in the day.` },
+  ];
+  const restrictionSafeRecipes = nigeriaRecipes.filter((recipe) => !excluded.some((item) => `${recipe.title} ${recipe.ingredients.join(" ")}`.toLowerCase().includes(item)));
+  const plantBasedRecipes = restrictionSafeRecipes.filter((recipe) => !/(chicken|fish|egg|catfish)/i.test(`${recipe.title} ${recipe.ingredients.join(" ")}`));
+  const usableRecipes = usesAnimalFoods ? restrictionSafeRecipes : plantBasedRecipes.length ? plantBasedRecipes : restrictionSafeRecipes;
+  const mealPlan = labels.map((label, index) => ({ ...(usableRecipes.length ? usableRecipes[index % usableRecipes.length] : nigeriaRecipes[0]), day: index + 1, label, storageNote, equipmentNote: recipeEquipmentNote }));
 
   const rounds = durationMinutes >= 30 ? 3 : 2;
-  const workoutTemplates: { title: string; category: string; instructions: string[] }[] = [
-    { title: "Home toning: full-body foundation", category: "Strength & toning", instructions: ["Warm up for 3 minutes: march in place, shoulder rolls, and hip circles.", `Complete ${rounds} rounds: 10 chair sit-to-stands, 8 wall push-ups, 10 hip hinges, and 12 calf raises.`, "Rest for 45–60 seconds between rounds and finish with 2 minutes of relaxed stretching."] },
-    { title: "Pilates-inspired core: control block", category: "Core & control", instructions: ["Spend 3 minutes on slow breathing, pelvic tilts, and gentle spinal mobility.", `Complete ${rounds} rounds: 8 heel taps per side, 8 dead-bug reaches per side, and a 20-second supported tabletop hold.`, "Finish with 6 slow cat-cow movements or seated spinal rolls and a side-body stretch."] },
-    { title: "Walking rhythm: step builder", category: "Steps & stamina", instructions: ["Start with 3 minutes at an easy walking or marching pace.", `Alternate 2 minutes steady walking with 1 minute brisk walking or higher-knee marching for ${Math.max(4, Math.floor(durationMinutes / 3))} cycles.`, "Cool down for 3 minutes and stretch calves and ankles gently."] },
-    { title: "Mobility reset: hips, back, shoulders", category: "Mobility & posture", instructions: ["Move through 6 shoulder rolls, 6 neck turns, and 8 ankle circles per side.", `Complete ${rounds} slow rounds: 8 supported squats, 8 standing hip openers per side, and 8 wall slides.`, "Finish with 60 seconds of comfortable breathing and a supported forward fold or chair stretch."] },
-    { title: "Lower-body and balance block", category: "Strength & balance", instructions: ["Warm up near a stable chair or wall for support.", `Complete ${rounds} rounds: 10 sit-to-stands, 10 side steps per side, 10 glute bridges or standing hip extensions, and 10 calf raises.`, "Finish with one 20-second supported single-leg balance per side, only if it feels steady."] },
-    { title: "Small-space cardio: no-equipment mix", category: "Movement variety", instructions: ["Use 3 minutes of easy marching and step touches to warm up.", `Complete ${rounds} rounds: 45 seconds marching, 45 seconds step touches, 45 seconds shadow boxing, then 45 seconds easy recovery.`, "Finish with 2 minutes of slow breathing and shoulder/leg stretches."] },
-    { title: "Recovery flow: restore and reset", category: "Recovery & mobility", instructions: ["Choose a calm space and take 6 slow breaths.", "Move gently through 8 cat-cow or seated spinal rolls, 8 hip circles per side, and 30 seconds of a comfortable child’s pose or chair fold.", "Finish with one sentence about what made movement possible today; no performance target is needed."] },
+  const workoutTemplates: Omit<WorkoutDay, "day" | "label" | "durationMinutes" | "adaptation">[] = [
+    { title: "Home toning: full-body foundation", category: "Strength & toning", instructions: ["Warm up for 3 minutes: march in place, shoulder rolls, and hip circles.", `Complete ${rounds} rounds: 10 chair sit-to-stands, 8 wall push-ups, 10 hip hinges, and 12 calf raises.`, "Rest for 45–60 seconds between rounds and finish with 2 minutes of relaxed stretching."], videoTitle: "30 MIN FULL BODY WORKOUT · At-Home Pilates", videoUrl: "https://www.youtube.com/watch?v=lBCBSy9cNT0", videoProvider: "Move With Nicole" },
+    { title: "Pilates-inspired core: control block", category: "Core & control", instructions: ["Spend 3 minutes on slow breathing, pelvic tilts, and gentle spinal mobility.", `Complete ${rounds} rounds: 8 heel taps per side, 8 dead-bug reaches per side, and a 20-second supported tabletop hold.`, "Finish with 6 slow cat-cow movements or seated spinal rolls and a side-body stretch."], videoTitle: "30 MIN PILATES CORE WORKOUT · At-Home Pilates Abs", videoUrl: "https://www.youtube.com/watch?v=U5LwQW_IQOc", videoProvider: "Move With Nicole" },
+    { title: "Walking rhythm: step builder", category: "Steps & stamina", instructions: ["Start with 3 minutes at an easy walking or marching pace.", `Alternate 2 minutes steady walking with 1 minute brisk walking or higher-knee marching for ${Math.max(4, Math.floor(durationMinutes / 3))} cycles.`, "Cool down for 3 minutes and stretch calves and ankles gently."], videoTitle: "30-Minute Yoga For Beginners", videoUrl: "https://www.youtube.com/watch?v=AB3Y-4a3ZrU", videoProvider: "Yoga With Adriene" },
+    { title: "Mobility reset: hips, back, shoulders", category: "Mobility & posture", instructions: ["Move through 6 shoulder rolls, 6 neck turns, and 8 ankle circles per side.", `Complete ${rounds} slow rounds: 8 supported squats, 8 standing hip openers per side, and 8 wall slides.`, "Finish with 60 seconds of comfortable breathing and a supported forward fold or chair stretch."], videoTitle: "30-Minute Yoga For Beginners", videoUrl: "https://www.youtube.com/watch?v=AB3Y-4a3ZrU", videoProvider: "Yoga With Adriene" },
+    { title: "Lower-body and balance block", category: "Strength & balance", instructions: ["Warm up near a stable chair or wall for support.", `Complete ${rounds} rounds: 10 sit-to-stands, 10 side steps per side, 10 glute bridges or standing hip extensions, and 10 calf raises.`, "Finish with one 20-second supported single-leg balance per side, only if it feels steady."], videoTitle: "30 MIN ABS & BOOTY WORKOUT · No Equipment", videoUrl: "https://www.youtube.com/watch?v=MvSK7dBbt8Q", videoProvider: "Move With Nicole" },
+    { title: "Small-space cardio: no-equipment mix", category: "Movement variety", instructions: ["Use 3 minutes of easy marching and step touches to warm up.", `Complete ${rounds} rounds: 45 seconds marching, 45 seconds step touches, 45 seconds shadow boxing, then 45 seconds easy recovery.`, "Finish with 2 minutes of slow breathing and shoulder/leg stretches."], videoTitle: "30 MIN ABS & BOOTY · No Equipment", videoUrl: "https://www.youtube.com/watch?v=pKhKqYBP7qQ", videoProvider: "YouTube" },
+    { title: "Recovery flow: restore and reset", category: "Recovery & mobility", instructions: ["Choose a calm space and take 6 slow breaths.", "Move gently through 8 cat-cow or seated spinal rolls, 8 hip circles per side, and 30 seconds of a comfortable child’s pose or chair fold.", "Finish with one sentence about what made movement possible today; no performance target is needed."], videoTitle: "30-Minute Yoga For Beginners", videoUrl: "https://www.youtube.com/watch?v=AB3Y-4a3ZrU", videoProvider: "Yoga With Adriene" },
   ];
   const workoutPlan = labels.map((label, index) => ({
+    ...workoutTemplates[index],
     day: index + 1,
     label,
-    title: workoutTemplates[index].title,
-    category: workoutTemplates[index].category,
     durationMinutes,
-    instructions: workoutTemplates[index].instructions,
     adaptation: `${movementAdaptation(profile)} Keep the session pain-free; pause or choose a gentler option if anything feels wrong.`,
   }));
 
