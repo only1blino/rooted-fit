@@ -17,3 +17,11 @@
 - [x] Add a tracking page for daily check-ins, step logging, weekly measurements, and motivational messages
 - [x] Update product documentation and tests for the expanded wellness MVP
 - [x] Complete evidence-led product analysis for cultural food variety, power-aware storage, scalable activity, and editable step tracking
+- [x] Analyse the supplied grocery, meal-plan, and food-timetable references for reusable structure and health-safety boundaries
+- [x] Add location-aware suggested food, ingredient, and favourite-fruit discovery with editable selections
+- [x] Add dietary restrictions and disliked-food controls that protect comfort foods from unnecessary removal
+- [x] Add multi-select secondary wellness focuses and a gender identity selector
+- [x] Add metric/imperial unit settings and expanded arm and thigh measurement fields
+- [x] Add private local front, side, and back progress-photo records
+- [x] Replace generic weekly outputs with specific ingredient quantities, recipe steps, timed meal slots, and cohesive workout blocks
+- [x] Add tests and update research/design documentation for the enhanced recommendation model

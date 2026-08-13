@@ -88,6 +88,13 @@ const config: ExpoConfig = {
   plugins: [
     "expo-router",
     [
+      "expo-image-picker",
+      {
+        photosPermission: "Allow $(PRODUCT_NAME) to select private progress photos stored on this device.",
+        cameraPermission: "Allow $(PRODUCT_NAME) to take private progress photos stored on this device.",
+      },
+    ],
+    [
       "expo-audio",
       {
         microphonePermission: "Allow $(PRODUCT_NAME) to access your microphone.",

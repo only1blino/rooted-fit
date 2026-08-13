@@ -1,24 +1,33 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import type { FoodCountry } from "@/lib/food-catalogue";
 
 export type ShoppingFrequency = "daily" | "weekly" | "biweekly" | "monthly";
 export type WellnessGoal = "consistency" | "energy" | "toning" | "core_mobility" | "body_composition" | null;
+export type MeasurementUnit = "metric" | "imperial";
+export type ProgressPhotoAngle = "front" | "side" | "back";
 
 export type UserProfile = {
   city: string;
+  country: FoodCountry;
   electricityHoursPerDay: number;
   marketMinutesAway: number;
   shoppingFrequency: ShoppingFrequency | null;
   kitchenEquipment: string[];
   otherKitchenEquipment: string[];
   favoriteMeals: string[];
+  favoriteFruits: string[];
   localIngredients: string[];
   dietaryNotes: string;
+  dietaryRestrictions: string[];
+  dislikedFoods: string[];
   dailyStepCount: number;
   workoutMinutesPerDay: number;
   workoutResources: string[];
   otherWorkoutResources: string[];
   goal: WellnessGoal;
+  secondaryFocuses: Exclude<WellnessGoal, null>[];
   genderIdentity: string;
+  measurementUnit: MeasurementUnit;
   heightCm: number | null;
   weightKg: number | null;
   baselineWaistCm: number | null;
@@ -80,30 +89,47 @@ export type BodyMeasurement = {
   waistCm: number | null;
   hipCm: number | null;
   chestCm: number | null;
+  upperArmCm: number | null;
+  thighCm: number | null;
+  unit: MeasurementUnit;
   note: string;
+};
+
+export type ProgressPhoto = {
+  id: string;
+  date: string;
+  angle: ProgressPhotoAngle;
+  uri: string;
 };
 
 export const profileStorageKey = "rootedfit.profile.v2";
 const legacyProfileStorageKey = "rootedfit.profile.v1";
 export const checkInsStorageKey = "rootedfit.check-ins.v1";
 export const measurementsStorageKey = "rootedfit.measurements.v1";
+export const progressPhotosStorageKey = "rootedfit.progress-photos.v1";
 
 export const emptyProfile: UserProfile = {
   city: "",
+  country: "Nigeria",
   electricityHoursPerDay: 0,
   marketMinutesAway: 0,
   shoppingFrequency: null,
   kitchenEquipment: [],
   otherKitchenEquipment: [],
   favoriteMeals: [],
+  favoriteFruits: [],
   localIngredients: [],
   dietaryNotes: "",
+  dietaryRestrictions: [],
+  dislikedFoods: [],
   dailyStepCount: 0,
   workoutMinutesPerDay: 0,
   workoutResources: [],
   otherWorkoutResources: [],
   goal: null,
+  secondaryFocuses: [],
   genderIdentity: "Prefer not to say",
+  measurementUnit: "metric",
   heightCm: null,
   weightKg: null,
   baselineWaistCm: null,
@@ -118,9 +144,13 @@ function normaliseProfile(profile: Partial<UserProfile>): UserProfile {
     kitchenEquipment: profile.kitchenEquipment ?? [],
     otherKitchenEquipment: profile.otherKitchenEquipment ?? [],
     favoriteMeals: profile.favoriteMeals ?? [],
+    favoriteFruits: profile.favoriteFruits ?? [],
     localIngredients: profile.localIngredients ?? [],
+    dietaryRestrictions: profile.dietaryRestrictions ?? [],
+    dislikedFoods: profile.dislikedFoods ?? [],
     workoutResources: profile.workoutResources ?? [],
     otherWorkoutResources: profile.otherWorkoutResources ?? [],
+    secondaryFocuses: profile.secondaryFocuses ?? [],
   };
 }
 
@@ -211,7 +241,7 @@ export async function saveProfile(profile: UserProfile) {
 }
 
 export async function clearProfile() {
-  await AsyncStorage.multiRemove([profileStorageKey, legacyProfileStorageKey, checkInsStorageKey, measurementsStorageKey]);
+  await AsyncStorage.multiRemove([profileStorageKey, legacyProfileStorageKey, checkInsStorageKey, measurementsStorageKey, progressPhotosStorageKey]);
 }
 
 export async function loadCheckIns(): Promise<DailyCheckIn[]> {
@@ -242,6 +272,20 @@ export async function saveMeasurements(measurements: BodyMeasurement[]) {
   await AsyncStorage.setItem(measurementsStorageKey, JSON.stringify(measurements.slice(0, 52)));
 }
 
+export async function loadProgressPhotos(): Promise<ProgressPhoto[]> {
+  const saved = await AsyncStorage.getItem(progressPhotosStorageKey);
+  if (!saved) return [];
+  try {
+    return JSON.parse(saved) as ProgressPhoto[];
+  } catch {
+    return [];
+  }
+}
+
+export async function saveProgressPhotos(photos: ProgressPhoto[]) {
+  await AsyncStorage.setItem(progressPhotosStorageKey, JSON.stringify(photos.slice(0, 60)));
+}
+
 export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
   const localIngredients = profile.localIngredients.length ? profile.localIngredients : ["a locally available vegetable", "a seasonal fruit", "a protein option"];
   const meals = profile.favoriteMeals.length ? profile.favoriteMeals : ["a familiar meal you enjoy", "a local staple", "a simple home meal"];
@@ -250,62 +294,31 @@ export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
   const goal = goalCopy(profile.goal);
   const durationMinutes = Math.max(10, Math.min(60, profile.workoutMinutesPerDay || 20));
   const labels = ["Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Day 7"];
-  const mealFocuses = [
-    "Familiar plate with a fresh partner",
-    "Pantry-and-produce bowl",
-    "Colour and fibre variety",
-    "Simple protein pairing",
-    "Comfort meal, planned lightly",
-    "Market-day mix-and-match",
-    "Use-what-you-have reset",
-  ];
-  const recipePatterns = [
-    (anchor: string, ingredient: string) => ({
-      title: `Keep ${anchor} on the table`,
-      steps: [`Prepare a same-day portion of ${anchor}.`, `${method[0].toUpperCase()}${method.slice(1)} ${ingredient} as a side, topping, or simple salad.`, "Add a protein option available to you, such as beans, eggs, fish, tofu, or another local choice.", "Serve and keep leftovers only when you can confirm safe cold storage."],
-      drink: "Water with chilled or room-temperature citrus, ginger, mint, or a fruit you already have.",
-    }),
-    (anchor: string, ingredient: string) => ({
-      title: `${anchor} and ${ingredient} one-bowl meal`,
-      steps: [`Start with ${anchor} or another starchy base you already cook.`, `Fold in ${ingredient} plus beans, lentils, eggs, fish, tofu, or a preferred protein.`, `${method[0].toUpperCase()}${method.slice(1)} until the ingredients are comfortably hot or tender.`, "Season with the flavours you already enjoy rather than replacing them."],
-      drink: "Blend or steep a simple fruit-and-water drink only if a blender or safe drinking water is available; otherwise choose water or unsweetened tea.",
-    }),
-    (anchor: string, ingredient: string) => ({
-      title: `Vegetable-forward ${anchor} variation`,
-      steps: [`Use ${anchor} as the familiar base.`, `Choose ${ingredient} and one second colour from your available ingredients.`, `${method[0].toUpperCase()}${method.slice(1)} the vegetables or enjoy them raw only after washing with safe water.`, "Add a filling protein choice and eat the prepared portion the same day when refrigeration is uncertain."],
-      drink: "A homemade infused water: add sliced fruit, cucumber, or herbs to safe drinking water when available.",
-    }),
-    (anchor: string, ingredient: string) => ({
-      title: `Quick ${anchor} protein pair`,
-      steps: [`Prepare ${anchor} in the way your household normally enjoys.`, `Build a small accompaniment from ${ingredient} and a protein available locally.`, `${method[0].toUpperCase()}${method.slice(1)} just enough for today’s meal.`, "Keep seasoning familiar and adjust the portion with hunger and energy in mind."],
-      drink: "Water first; add a homemade fruit drink as an optional flavour, not a replacement for meals.",
-    }),
-    (anchor: string, ingredient: string) => ({
-      title: `Comforting ${anchor}, balanced by ${ingredient}`,
-      steps: [`Make ${anchor} as a meal you recognise and enjoy.`, `Add ${ingredient} on the side or into the dish for a second texture and colour.`, "Choose a protein you can afford and find reliably.", "Make only the quantity that fits your real storage situation."],
-      drink: "Unsweetened tea, water, or a freshly prepared local fruit drink if ingredients and safe water are available.",
-    }),
-    (anchor: string, ingredient: string) => ({
-      title: `Market-day ${anchor} mix`,
-      steps: [`Use ${anchor} plus the freshest ${ingredient} you can obtain.`, "Choose one pantry staple for staying power and one protein for satisfaction.", `${method[0].toUpperCase()}${method.slice(1)} or assemble in a method that uses only the tools you selected.`, "Set aside a next-day ingredient only if you have reliable safe storage."],
-      drink: "Fresh water with a squeezed citrus wedge or a warm herbal drink, depending on your preference.",
-    }),
-    (anchor: string, ingredient: string) => ({
-      title: `Flexible ${anchor} reset`,
-      steps: [`Look at what remains: ${anchor}, ${ingredient}, and any durable pantry item.`, "Combine them into a simple bowl, soup, wrap, or plate using your available appliance.", "Add a protein option if available.", "Use this as a no-waste, same-day meal rather than a strict recipe."],
-      drink: "Your preferred unsweetened drink alongside safe drinking water.",
-    }),
-  ];
+  const excluded = [...profile.dietaryRestrictions, ...profile.dislikedFoods].map((item) => item.toLowerCase());
+  const allowed = (item: string) => !excluded.some((excludedItem) => item.toLowerCase().includes(excludedItem) || excludedItem.includes(item.toLowerCase()));
+  const protein = ["2 eggs", "¾ cup cooked beans", "1 palm-sized fish portion", "¾ cup tofu", "1 palm-sized chicken portion"].find(allowed) ?? "¾ cup of a protein you have confirmed is suitable";
+  const fruit = profile.favoriteFruits.find(allowed) ?? "a locally available fruit";
+  const mealFocuses = ["Familiar plate, measured ingredients", "Pantry-and-produce bowl", "Vegetable and protein pairing", "Simple lunch or dinner plate", "Comfort food with practical additions", "Market-day fresh meal", "Use-what-you-have reset"];
   const mealPlan = labels.map((label, index) => {
     const anchor = cycle(meals, index, "a familiar local meal");
     const ingredient = cycle(localIngredients, index, "a locally available ingredient");
-    const pattern = recipePatterns[index](anchor, ingredient);
+    const secondIngredient = cycle(localIngredients, index + 1, "onion or another available vegetable");
+    const portions = [`1 cup prepared ${anchor}`, `1 cup ${ingredient}`, `½ cup ${secondIngredient}`, protein, "1 teaspoon cooking oil or the amount your recipe normally needs"];
+    const pattern = [
+      { title: `${anchor} with ${ingredient} and protein`, steps: [`Set out ${portions[0]}, ${portions[1]}, and ${portions[3]}.`, `${method[0].toUpperCase()}${method.slice(1)} ${ingredient} with the oil and add it beside or into ${anchor}.`, `Prepare ${protein} using only your listed kitchen equipment.`, "Serve the meal while fresh; do not plan leftovers unless you can confirm cold storage is safe."], drink: `Serve safe drinking water with 1 sliced ${fruit} or a fruit portion on the side.` },
+      { title: `${anchor} one-bowl mix`, steps: [`Measure ${portions[0]} and ${portions[1]}.`, `${method[0].toUpperCase()}${method.slice(1)} ${ingredient} and ${secondIngredient} until tender.`, `Stir in or serve with ${protein}; season using flavours you already enjoy.`, "Eat the prepared portion the same day when cold storage is uncertain."], drink: `Make a simple ${fruit} and water drink only when safe water and the equipment are available.` },
+      { title: `Colourful ${anchor} plate`, steps: [`Place ${portions[0]} on a plate or bowl.`, `Add 1 cup ${ingredient} and ½ cup ${secondIngredient} as a cooked or washed fresh side.`, `Add ${protein}.`, "Keep the familiar meal at the centre; the additions are for variety, not replacement."], drink: `Have water, unsweetened tea, or ${fruit} with the meal.` },
+      { title: `${anchor} and ${ingredient} quick recipe`, steps: [`Prepare 1 cup ${anchor} as your household normally would.`, `${method[0].toUpperCase()}${method.slice(1)} 1 cup ${ingredient} with ${secondIngredient}.`, `Add ${protein} and heat until ready to eat.`, "Taste for familiar seasoning and serve immediately."], drink: `Water plus a portion of ${fruit}.` },
+      { title: `Comforting ${anchor} with a practical side`, steps: [`Cook or warm 1 cup ${anchor}.`, `Make a side of 1 cup ${ingredient} and ½ cup ${secondIngredient}.`, `Add ${protein}.`, "Make the same-day quantity that fits your actual power and storage window."], drink: `Water or a freshly prepared ${fruit} drink without treating it as a meal replacement.` },
+      { title: `Fresh-market ${anchor} meal`, steps: [`Use 1 cup ${anchor} with the freshest 1 cup ${ingredient} you can obtain.`, `Add ½ cup ${secondIngredient} for another texture or colour.`, `Prepare ${protein} using your available equipment.`, "Use delicate fresh items first and save durable ingredients for later in the shopping cycle."], drink: `Safe water with ${fruit}, ginger, or citrus if you enjoy it.` },
+      { title: `Flexible ${anchor} reset`, steps: [`Check what you have: 1 cup ${anchor}, 1 cup ${ingredient}, and ½ cup ${secondIngredient}.`, `Choose ${protein} if available and appropriate for your restrictions.`, `${method[0].toUpperCase()}${method.slice(1)} or assemble the ingredients into a simple one-bowl meal.`, "Use it as a realistic no-waste meal, not a perfect-recipe test."], drink: `Your preferred unsweetened drink plus safe drinking water.` },
+    ][index];
     return {
       day: index + 1,
       label,
       title: pattern.title,
       focus: mealFocuses[index],
-      ingredients: [anchor, ingredient, cycle(localIngredients, index + 1, "a second ingredient"), "a protein option you can find", "a pantry staple if useful"],
+      ingredients: portions,
       steps: pattern.steps,
       drink: pattern.drink,
       storageNote,
@@ -313,14 +326,15 @@ export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
     } satisfies MealDay;
   });
 
+  const rounds = durationMinutes >= 30 ? 3 : 2;
   const workoutTemplates: { title: string; category: string; instructions: string[] }[] = [
-    { title: "Home toning circuit", category: "Strength & toning", instructions: ["Warm up with easy marching and shoulder rolls.", "Repeat sit-to-stands, wall push-ups, and slow hip hinges at a comfortable effort.", "Finish with standing calf raises and a short breath-led stretch."] },
-    { title: "Pilates-inspired core", category: "Core & control", instructions: ["Begin with relaxed breathing and gentle pelvic tilts.", "Try heel taps, dead bugs, or a supported tabletop hold only as controlled.", "Finish with a side-body stretch and slow spinal mobility."] },
-    { title: "Walk and step rhythm", category: "Steps & stamina", instructions: ["Choose a safe route indoors or outside, or march in place.", "Break the session into short intervals with easy recovery walks.", "End with ankle circles and a gentle calf stretch."] },
-    { title: "Mobility reset", category: "Mobility & posture", instructions: ["Move gently through neck, shoulder, hip, and ankle ranges.", "Add supported squats or chair-assisted balance if comfortable.", "Finish by lying or sitting quietly and noticing how your body feels."] },
-    { title: "Lower-body and balance", category: "Strength & balance", instructions: ["Start with a supported warm-up near a stable surface.", "Use controlled sit-to-stands, side steps, and calf raises.", "Finish with a relaxed hip and hamstring stretch."] },
-    { title: "Small-space cardio mix", category: "Movement variety", instructions: ["Use gentle marching, step touches, or a safe stair/step pattern.", "Alternate an easy pace with short, slightly livelier intervals.", "Cool down with slow breathing and a full-body shakeout."] },
-    { title: "Recovery flow", category: "Recovery & mobility", instructions: ["Choose easy mobility that feels good today.", "Combine gentle cat-cow, child’s pose, standing reach, or chair stretches as comfortable.", "Finish with a short reflection on one action you can repeat tomorrow."] },
+    { title: "Home toning: full-body foundation", category: "Strength & toning", instructions: ["Warm up for 3 minutes: march in place, shoulder rolls, and hip circles.", `Complete ${rounds} rounds: 10 chair sit-to-stands, 8 wall push-ups, 10 hip hinges, and 12 calf raises.`, "Rest for 45–60 seconds between rounds and finish with 2 minutes of relaxed stretching."] },
+    { title: "Pilates-inspired core: control block", category: "Core & control", instructions: ["Spend 3 minutes on slow breathing, pelvic tilts, and gentle spinal mobility.", `Complete ${rounds} rounds: 8 heel taps per side, 8 dead-bug reaches per side, and a 20-second supported tabletop hold.`, "Finish with 6 slow cat-cow movements or seated spinal rolls and a side-body stretch."] },
+    { title: "Walking rhythm: step builder", category: "Steps & stamina", instructions: ["Start with 3 minutes at an easy walking or marching pace.", `Alternate 2 minutes steady walking with 1 minute brisk walking or higher-knee marching for ${Math.max(4, Math.floor(durationMinutes / 3))} cycles.`, "Cool down for 3 minutes and stretch calves and ankles gently."] },
+    { title: "Mobility reset: hips, back, shoulders", category: "Mobility & posture", instructions: ["Move through 6 shoulder rolls, 6 neck turns, and 8 ankle circles per side.", `Complete ${rounds} slow rounds: 8 supported squats, 8 standing hip openers per side, and 8 wall slides.`, "Finish with 60 seconds of comfortable breathing and a supported forward fold or chair stretch."] },
+    { title: "Lower-body and balance block", category: "Strength & balance", instructions: ["Warm up near a stable chair or wall for support.", `Complete ${rounds} rounds: 10 sit-to-stands, 10 side steps per side, 10 glute bridges or standing hip extensions, and 10 calf raises.`, "Finish with one 20-second supported single-leg balance per side, only if it feels steady."] },
+    { title: "Small-space cardio: no-equipment mix", category: "Movement variety", instructions: ["Use 3 minutes of easy marching and step touches to warm up.", `Complete ${rounds} rounds: 45 seconds marching, 45 seconds step touches, 45 seconds shadow boxing, then 45 seconds easy recovery.`, "Finish with 2 minutes of slow breathing and shoulder/leg stretches."] },
+    { title: "Recovery flow: restore and reset", category: "Recovery & mobility", instructions: ["Choose a calm space and take 6 slow breaths.", "Move gently through 8 cat-cow or seated spinal rolls, 8 hip circles per side, and 30 seconds of a comfortable child’s pose or chair fold.", "Finish with one sentence about what made movement possible today; no performance target is needed."] },
   ];
   const workoutPlan = labels.map((label, index) => ({
     day: index + 1,

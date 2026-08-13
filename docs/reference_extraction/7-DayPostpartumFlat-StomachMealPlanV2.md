@@ -1,0 +1,9 @@
+# 7-Day Postpartum Flat-Stomach M
+Day | Meal 1 (Late Morning - 11AM/12PM) | Snack (Afternoon Fix) | Meal 2 (Evening - 6PM/7PM) | Crucial Flat-Stomach Rule
+Day 1 | Oat Pancakes (Oats + 2 Eggs) with 1 tbsp Peanut Butter & 1/2 Banana | Apple slices with 1 tbsp Peanut Butter | Edikaikong Soup with Chicken/Meat/Panla + Fist-sized Semo | Eat ALL soup protein & vegetables BEFORE touching the Semo!
+Day 2 | Panla & Beans Balance (70% Beans + 30% Orishirishi Rice) + 1 Boiled Egg | Yogurt with 1 tbsp Chia Seeds & chopped fruit | Egusi Soup with plenty of Meat & Fish + Fist-sized Fufu | Keep the Fufu portion strictly to the size of your closed fist.
+Day 3 | 2 Slices of Wheat Bread + 2 Boiled Eggs + Cucumber slices | Handful of Roasted Groundnuts + 1 Apple or Orange | Coconut Rice with a massive side of Grilled Chicken/Fish & Veggies | Follow the 50/50 Plate Law: 50% protein/veggies, max 50% rice. Eat protein first!
+Day 4 | Oat Pancakes (Oats + 2 Eggs + touch of honey) + 1 tbsp Peanut Butter | Yogurt & Chia Seed Pudding (let sit for 10 mins) | Ogbono Soup heavily loaded with Beef & Panla + Fist-sized Fufu | Drink a glass of water before starting your evening swallow.
+Day 5 | Beans & Panla Porridge (High protein & fiber) + 1 Boiled Egg | Apple slices dipped in 1 tbsp Peanut Butter | Dirty Rice with Veggies (heavily loaded with minced meat/liver) | Organ meats are high-protein and iron gold for postpartum recovery!
+Day 6 | 2 Boiled Eggs + 1 small Boiled Sweet Potato (Chilled) + 1 tbsp Peanut Butter | Plain yogurt with Chia seeds and Banana slices | Egusi Soup with plenty of Meat & Panla + Fist-sized Fufu | Chew meat and fish thoroughly to slow down digestion and stay full.
+Day 7 | Oat Pancakes with 1/2 sliced banana and 1 tbsp Peanut Butter | Handful of Roasted Groundnuts + 1 fruit of choice | Healthy Fried Rice loaded with plenty of Liver, Chicken & Veggies | Cool your cooked rice in the fridge first to activate the resistant starch trick!

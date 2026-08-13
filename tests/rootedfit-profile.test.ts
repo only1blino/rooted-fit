@@ -14,24 +14,31 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
-import { buildWeeklyPlan, loadCheckIns, loadMeasurements, loadProfile, numberOrNull, saveCheckIns, saveMeasurements, saveProfile, splitList, type UserProfile } from "../lib/rootedfit-profile";
+import { buildWeeklyPlan, loadCheckIns, loadMeasurements, loadProfile, loadProgressPhotos, numberOrNull, saveCheckIns, saveMeasurements, saveProfile, saveProgressPhotos, splitList, type UserProfile } from "../lib/rootedfit-profile";
+import { suggestedFoods, suggestedFruits } from "../lib/food-catalogue";
 
 const microwaveProfile: UserProfile = {
   city: "Lagos",
+  country: "Nigeria",
   electricityHoursPerDay: 12,
   marketMinutesAway: 20,
   shoppingFrequency: "biweekly",
   kitchenEquipment: ["Microwave"],
   otherKitchenEquipment: [],
   favoriteMeals: ["yam and pepper soup", "rice and stew"],
+  favoriteFruits: ["Mango"],
   localIngredients: ["carrots", "cucumbers", "beans"],
   dietaryNotes: "",
+  dietaryRestrictions: [],
+  dislikedFoods: [],
   dailyStepCount: 3500,
   workoutMinutesPerDay: 20,
   workoutResources: ["Yoga mat", "Safe floor space"],
   otherWorkoutResources: [],
   goal: "core_mobility",
+  secondaryFocuses: ["consistency"],
   genderIdentity: "Prefer not to say",
+  measurementUnit: "metric",
   heightCm: null,
   weightKg: null,
   baselineWaistCm: null,
@@ -58,6 +65,15 @@ describe("RootedFit weekly plan builder", () => {
     expect(numberOrNull("62,5")).toBe(62.5);
   });
 
+  it("offers a full Nigeria-first catalogue and does not force a restricted item into a recipe", () => {
+    const plan = buildWeeklyPlan({ ...microwaveProfile, dietaryRestrictions: ["eggs"], localIngredients: ["beans", "carrots", "cucumbers"] });
+
+    expect(suggestedFoods("Nigeria")).toHaveLength(50);
+    expect(suggestedFruits("Nigeria")).toContain("Mango");
+    expect(JSON.stringify(plan.meals).toLowerCase()).not.toContain("eggs");
+    expect(plan.meals[0].ingredients[0]).toMatch(/^1 cup prepared/);
+  });
+
   it("persists the expanded onboarding profile locally", async () => {
     await saveProfile(microwaveProfile);
 
@@ -66,12 +82,20 @@ describe("RootedFit weekly plan builder", () => {
 
   it("persists daily check-ins and weekly measurements locally", async () => {
     const checkIns = [{ id: "today", date: "2026-08-13", steps: 4500, mood: "good" as const, followedMealIdea: true, completedMovement: false, note: "Walked after lunch" }];
-    const measurements = [{ id: "week-1", date: "2026-08-13", weightKg: 62.5, waistCm: 74, hipCm: null, chestCm: null, note: "Morning check-in" }];
+    const measurements = [{ id: "week-1", date: "2026-08-13", weightKg: 62.5, waistCm: 74, hipCm: null, chestCm: null, upperArmCm: null, thighCm: null, unit: "metric" as const, note: "Morning check-in" }];
 
     await saveCheckIns(checkIns);
     await saveMeasurements(measurements);
 
     await expect(loadCheckIns()).resolves.toEqual(checkIns);
     await expect(loadMeasurements()).resolves.toEqual(measurements);
+  });
+
+  it("persists private local front, side, and back photo references", async () => {
+    const photos = [{ id: "front-1", date: "2026-08-13", angle: "front" as const, uri: "file:///private/rootedfit-progress/front.jpg" }];
+
+    await saveProgressPhotos(photos);
+
+    await expect(loadProgressPhotos()).resolves.toEqual(photos);
   });
 });
