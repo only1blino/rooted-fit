@@ -14,7 +14,7 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
-import { applyTodayResourceSubstitutions, applyTodayUnavailableResources, buildWeeklyPlan, buildWorkoutSessionPreview, buildWorkoutWhyToday, categorizeGroceryItems, findSimilarRecipe, formatGroceryChecklistPrintHtml, formatGroceryListExport, getTodayResourceSubstituteOptions, loadCheckIns, loadCompletionRatings, loadExerciseLogs, loadGroceryChecklist, loadMealSwaps, loadMeasurements, loadPlannedSessionReminder, loadProfile, loadProgressPhotos, loadResourceChangeFeedback, loadTodayResourceSubstitutions, loadTodayUnavailableResources, loadWorkoutSessionStates, normaliseReminderTime, numberOrNull, practicalGroceryItems, saveCheckIns, saveCompletionRatings, saveExerciseLogs, saveGroceryChecklist, saveMealSwaps, saveMeasurements, savePlannedSessionReminder, saveProfile, saveProgressPhotos, saveResourceChangeFeedback, saveTodayResourceSubstitutions, saveTodayUnavailableResources, saveWorkoutSessionStates, splitList, type UserProfile } from "../lib/rootedfit-profile";
+import { applyTodayResourceSubstitutions, applyTodayUnavailableResources, buildWeeklyPlan, buildWorkoutSessionPreview, buildWorkoutWhyToday, categorizeGroceryItems, findSimilarRecipe, formatGroceryChecklistPrintHtml, formatGroceryListExport, getTodayResourceSubstituteOptions, loadCheckIns, loadCompletionRatings, loadExerciseLogs, loadGroceryChecklist, loadMealSwaps, loadMeasurements, loadPlannedSessionReminder, loadProfile, loadProgressPhotos, loadResourceChangeFeedback, loadTodayResourceSubstitutions, loadTodayUnavailableResources, loadWorkoutSessionStates, normaliseReminderTime, normaliseReminderWeekdays, numberOrNull, practicalGroceryItems, saveCheckIns, saveCompletionRatings, saveExerciseLogs, saveGroceryChecklist, saveMealSwaps, saveMeasurements, savePlannedSessionReminder, saveProfile, saveProgressPhotos, saveResourceChangeFeedback, saveTodayResourceSubstitutions, saveTodayUnavailableResources, saveWorkoutSessionStates, splitList, type UserProfile } from "../lib/rootedfit-profile";
 import { suggestedFoods, suggestedFruits, suggestedMeals } from "../lib/food-catalogue";
 
 const microwaveProfile: UserProfile = {
@@ -280,7 +280,8 @@ describe("RootedFit weekly plan builder", () => {
   it("normalises and persists a gentle planned-session reminder locally", async () => {
     expect(normaliseReminderTime("7:05")).toBe("07:05");
     expect(normaliseReminderTime("25:10")).toBeNull();
-    const reminder = { time: "18:00", enabled: true, notificationId: "native-reminder-1", updatedAt: "2026-08-13T18:00:00.000Z" };
+    expect(normaliseReminderWeekdays([6, 2, 6, 0, 8, 4])).toEqual([2, 4, 6]);
+    const reminder = { time: "18:00", weekdays: [2, 4, 6] as (2 | 4 | 6)[], enabled: true, notificationIds: ["native-reminder-1"], updatedAt: "2026-08-13T18:00:00.000Z" };
     await savePlannedSessionReminder(reminder);
     await expect(loadPlannedSessionReminder()).resolves.toEqual(reminder);
   });

@@ -130,7 +130,8 @@ export type ProgressPhoto = {
 
 export type MealSwap = { slotKey: string; recipeIndex: number };
 export type WorkoutSessionState = { workoutId: string; saved: boolean; completedAt: string | null };
-export type PlannedSessionReminder = { time: string | null; enabled: boolean; notificationId: string | null; updatedAt: string };
+export type ReminderWeekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+export type PlannedSessionReminder = { time: string | null; weekdays: ReminderWeekday[]; enabled: boolean; notificationIds: string[]; updatedAt: string };
 export type DailyWaterLog = { date: string; millilitres: number };
 export type GroceryChecklistItem = { key: string; checked: boolean };
 export type LocalExerciseLog = { id: string; workoutId: string; exerciseName: string; setNumber: number; repCount: number; weightUsedKg: number | null; loggedAt: string };
@@ -581,19 +582,25 @@ export function normaliseReminderTime(value: string): string | null {
   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }
 
+export function normaliseReminderWeekdays(values: number[]): ReminderWeekday[] {
+  return Array.from(new Set(values.filter((value): value is ReminderWeekday => Number.isInteger(value) && value >= 1 && value <= 7))).sort((a, b) => a - b);
+}
+
 export async function loadPlannedSessionReminder(): Promise<PlannedSessionReminder> {
   const saved = await AsyncStorage.getItem(plannedSessionReminderStorageKey);
-  if (!saved) return { time: null, enabled: false, notificationId: null, updatedAt: "" };
+  if (!saved) return { time: null, weekdays: [2, 3, 4, 5, 6] as ReminderWeekday[], enabled: false, notificationIds: [], updatedAt: "" };
   try {
-    const entry = JSON.parse(saved) as PlannedSessionReminder;
-    return { time: entry.time && normaliseReminderTime(entry.time), enabled: Boolean(entry.enabled), notificationId: entry.notificationId ?? null, updatedAt: entry.updatedAt ?? "" };
+    const entry = JSON.parse(saved) as Partial<PlannedSessionReminder> & { notificationId?: string | null };
+    const notificationIds = Array.isArray(entry.notificationIds) ? entry.notificationIds.filter((value): value is string => typeof value === "string") : entry.notificationId ? [entry.notificationId] : [];
+    const weekdays = Array.isArray(entry.weekdays) ? normaliseReminderWeekdays(entry.weekdays) : [1, 2, 3, 4, 5, 6, 7] as ReminderWeekday[];
+    return { time: entry.time ? normaliseReminderTime(entry.time) : null, weekdays, enabled: Boolean(entry.enabled), notificationIds, updatedAt: entry.updatedAt ?? "" };
   } catch {
-    return { time: null, enabled: false, notificationId: null, updatedAt: "" };
+    return { time: null, weekdays: [2, 3, 4, 5, 6] as ReminderWeekday[], enabled: false, notificationIds: [], updatedAt: "" };
   }
 }
 
 export async function savePlannedSessionReminder(reminder: PlannedSessionReminder) {
-  await AsyncStorage.setItem(plannedSessionReminderStorageKey, JSON.stringify({ ...reminder, time: reminder.time ? normaliseReminderTime(reminder.time) : null }));
+  await AsyncStorage.setItem(plannedSessionReminderStorageKey, JSON.stringify({ ...reminder, time: reminder.time ? normaliseReminderTime(reminder.time) : null, weekdays: normaliseReminderWeekdays(reminder.weekdays), notificationIds: reminder.notificationIds.slice(0, 7) }));
 }
 
 export async function loadWaterLogs(): Promise<DailyWaterLog[]> {

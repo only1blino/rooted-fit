@@ -133,3 +133,5 @@
 - [x] Add local-first planned-session reminder settings with native notification support and web guidance
 - [x] Add a protected feedback-review dashboard for the RootedFit beta team
 - [x] Add regression coverage, validate, publish, and push the reminders and feedback-dashboard release
+- [x] Let users choose specific weekdays and times for gentle session reminders
+- [x] Add regression coverage, validate, publish, and push the recurring reminder update
