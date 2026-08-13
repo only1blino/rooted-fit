@@ -14,7 +14,7 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
-import { buildWeeklyPlan, categorizeGroceryItems, findSimilarRecipe, formatGroceryChecklistPrintHtml, formatGroceryListExport, loadCheckIns, loadCompletionRatings, loadExerciseLogs, loadGroceryChecklist, loadMealSwaps, loadMeasurements, loadProfile, loadProgressPhotos, loadWorkoutSessionStates, numberOrNull, practicalGroceryItems, saveCheckIns, saveCompletionRatings, saveExerciseLogs, saveGroceryChecklist, saveMealSwaps, saveMeasurements, saveProfile, saveProgressPhotos, saveWorkoutSessionStates, splitList, type UserProfile } from "../lib/rootedfit-profile";
+import { applyTodayUnavailableResources, buildWeeklyPlan, categorizeGroceryItems, findSimilarRecipe, formatGroceryChecklistPrintHtml, formatGroceryListExport, loadCheckIns, loadCompletionRatings, loadExerciseLogs, loadGroceryChecklist, loadMealSwaps, loadMeasurements, loadProfile, loadProgressPhotos, loadTodayUnavailableResources, loadWorkoutSessionStates, numberOrNull, practicalGroceryItems, saveCheckIns, saveCompletionRatings, saveExerciseLogs, saveGroceryChecklist, saveMealSwaps, saveMeasurements, saveProfile, saveProgressPhotos, saveTodayUnavailableResources, saveWorkoutSessionStates, splitList, type UserProfile } from "../lib/rootedfit-profile";
 import { suggestedFoods, suggestedFruits, suggestedMeals } from "../lib/food-catalogue";
 
 const microwaveProfile: UserProfile = {
@@ -229,6 +229,28 @@ describe("RootedFit weekly plan builder", () => {
     expect(equippedPlan.workouts[4].resourcesUsed).toContain("Weights, filled bottles, or backpack");
     expect(equippedPlan.workouts[0].videoAvailable).toBe(true);
     expect(backpackPlan.workouts[0].title).toContain("Loaded home strength");
+  });
+
+  it("adds matched chair, resistance-band, and water-bottle demonstrations when those resources drive a workout", () => {
+    const chairPlan = buildWeeklyPlan({ ...microwaveProfile, workoutResources: ["Chair", "Internet for video workouts"] });
+    const bandPlan = buildWeeklyPlan({ ...microwaveProfile, workoutResources: ["Resistance band", "Internet for video workouts"] });
+    const bottlePlan = buildWeeklyPlan({ ...microwaveProfile, workoutResources: ["Weights or filled bottles", "Internet for video workouts"] });
+
+    expect(chairPlan.workouts[0].resourceDemonstrations[0]).toMatchObject({ resource: "Chair", videoUrl: "https://www.youtube.com/watch?v=gD14hSNBT7M" });
+    expect(bandPlan.workouts[0].resourceDemonstrations[0]).toMatchObject({ resource: "Resistance band", videoUrl: "https://www.youtube.com/watch?v=tONvKzIiqqw" });
+    expect(bottlePlan.workouts[0].resourceDemonstrations[0]).toMatchObject({ resource: "Weights or filled bottles", videoUrl: "https://www.youtube.com/watch?v=bGXIt8zR3os" });
+  });
+
+  it("keeps a saved home setup unchanged while excluding temporarily unavailable resources from today’s workout", async () => {
+    const savedProfile = { ...microwaveProfile, workoutResources: ["Chair", "Resistance band", "Internet for video workouts"] };
+    const todayProfile = applyTodayUnavailableResources(savedProfile, ["Resistance band"]);
+    const plan = buildWeeklyPlan(todayProfile);
+
+    expect(savedProfile.workoutResources).toContain("Resistance band");
+    expect(todayProfile.workoutResources).not.toContain("Resistance band");
+    expect(plan.workouts[0].title).toContain("Chair-supported strength");
+    await saveTodayUnavailableResources(["Chair"]);
+    await expect(loadTodayUnavailableResources()).resolves.toEqual(["Chair"]);
   });
 
   it("finds a similar available recipe and organizes the unchanged grocery ingredients by supermarket section", () => {

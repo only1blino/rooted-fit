@@ -14,3 +14,9 @@ Follow-along recommendations should only be presented as an actionable streaming
 
 1. NHS, [Strength exercises](https://www.nhs.uk/live-well/exercise/strength-exercises/).
 2. American Council on Exercise, [The ACE Workout Builder for Resistance Band Workouts](https://www.acefitness.org/continuing-education/certified/july-2025/8897/the-ace-workout-builder-for-resistance-band-workouts/).
+
+## Verified optional demonstrations
+
+- **Chair:** [Full Body Chair Workout](https://www.youtube.com/watch?v=gD14hSNBT7M) from East London NHS Foundation Trust. The video describes a beginner-friendly full-body chair session and calls for a sturdy chair.
+- **Resistance band:** [15 min Resistance Band Workout — Full Body Routine](https://www.youtube.com/watch?v=tONvKzIiqqw) from fitbymik. The video description calls for a light-to-medium handled resistance band.
+- **Water bottles:** [Full Body Water Bottle Workout — At Home](https://www.youtube.com/watch?v=bGXIt8zR3os) from Coach Mere. The video is used as an optional demonstration only for users who select weights or filled bottles.

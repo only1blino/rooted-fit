@@ -120,3 +120,7 @@
 - [x] Add regression coverage for retained day selection, instructor toggles, and level-specific video changes
 - [x] Validate, publish, and push the corrected workout controls to web, Expo, and GitHub
 - [x] Make workout recommendations, substitutions, and follow-along options respond to the user’s available home resources
+- [x] Add a direct Workouts-page shortcut for editing the user’s home equipment
+- [x] Add resource-specific chair, resistance-band, and water-bottle demonstration links
+- [x] Let users mark a saved home resource unavailable for today and adapt the workout locally
+- [x] Add regression coverage and publish the web, Expo, and GitHub resource-control release

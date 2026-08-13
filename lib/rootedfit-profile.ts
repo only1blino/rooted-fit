@@ -6,6 +6,7 @@ export type MealFrequency = "one_plus_snack" | "two" | "three";
 export type ServingSize = "lighter" | "regular" | "generous";
 export type WorkoutDifficulty = "beginner" | "intermediate" | "advanced";
 export type WorkoutInstructorOption = { kind: "man" | "woman"; label: string; name: string; videoTitle: string; videoUrl: string; videoProvider: string };
+export type WorkoutResourceDemonstration = { resource: "Chair" | "Resistance band" | "Weights or filled bottles"; title: string; videoUrl: string; videoProvider: string };
 export type SweetToothPreference = "none" | "healthier_swaps" | "portion_guidance";
 export type WellnessGoal = "consistency" | "energy" | "toning" | "core_mobility" | "body_composition" | "weight_loss" | "weight_gain" | null;
 export type MeasurementUnit = "ft_in_kg" | "cm_lb";
@@ -70,6 +71,7 @@ export type WorkoutDay = {
   adaptation: string;
   resourcesUsed: string[];
   resourceRationale: string;
+  resourceDemonstrations: WorkoutResourceDemonstration[];
   videoAvailable: boolean;
   videoTitle: string;
   videoUrl: string;
@@ -132,6 +134,7 @@ export type DailyWaterLog = { date: string; millilitres: number };
 export type GroceryChecklistItem = { key: string; checked: boolean };
 export type LocalExerciseLog = { id: string; workoutId: string; exerciseName: string; setNumber: number; repCount: number; weightUsedKg: number | null; loggedAt: string };
 export type CompletionRating = { completionKey: string; rating: 1 | 2 | 3 | 4 | 5; ratedAt: string };
+export type TodayUnavailableResources = { date: string; resources: string[] };
 
 export const profileStorageKey = "rootedfit.profile.v2";
 const legacyProfileStorageKey = "rootedfit.profile.v1";
@@ -144,6 +147,7 @@ export const waterLogsStorageKey = "rootedfit.water-logs.v1";
 export const groceryChecklistStorageKey = "rootedfit.grocery-checklist.v1";
 export const exerciseLogsStorageKey = "rootedfit.exercise-logs.v1";
 export const completionRatingsStorageKey = "rootedfit.completion-ratings.v1";
+export const todayUnavailableResourcesStorageKey = "rootedfit.today-unavailable-resources.v1";
 
 export const emptyProfile: UserProfile = {
   city: "",
@@ -326,7 +330,7 @@ export function practicalGroceryItems(recipeIngredients: string[]) {
   return Array.from(new Set(mapped.filter(Boolean)));
 }
 
-type WorkoutTemplate = Omit<WorkoutDay, "day" | "label" | "durationMinutes" | "adaptation" | "difficulty" | "instructorOptions" | "resourceRationale" | "videoAvailable">;
+type WorkoutTemplate = Omit<WorkoutDay, "day" | "label" | "durationMinutes" | "adaptation" | "difficulty" | "instructorOptions" | "resourceRationale" | "resourceDemonstrations" | "videoAvailable">;
 
 type HomeWorkoutResources = {
   hasMat: boolean;
@@ -377,6 +381,15 @@ function resourceRationale(profile: UserProfile, resources: HomeWorkoutResources
   ].filter(Boolean) as string[];
   const otherResources = profile.otherWorkoutResources.length ? ` You also noted ${sentenceList(profile.otherWorkoutResources, "other home resources")}.` : "";
   return matched.length ? `Your selected setup changes the movement choices through ${sentenceList(matched, "your available resources")}.${otherResources}` : `No dedicated equipment was selected, so this week uses bodyweight movements and a small clear space.${otherResources}`;
+}
+
+function resourceDemonstrationsFor(resourcesUsed: string[]): WorkoutResourceDemonstration[] {
+  const joined = resourcesUsed.join(" ").toLowerCase();
+  const demonstrations: WorkoutResourceDemonstration[] = [];
+  if (joined.includes("chair")) demonstrations.push({ resource: "Chair", title: "Full Body Chair Workout", videoUrl: "https://www.youtube.com/watch?v=gD14hSNBT7M", videoProvider: "East London NHS Foundation Trust" });
+  if (joined.includes("resistance band")) demonstrations.push({ resource: "Resistance band", title: "15 min Resistance Band Workout · Full Body", videoUrl: "https://www.youtube.com/watch?v=tONvKzIiqqw", videoProvider: "fitbymik" });
+  if (joined.includes("weights") || joined.includes("bottles") || joined.includes("backpack")) demonstrations.push({ resource: "Weights or filled bottles", title: "Full Body Water Bottle Workout · At Home", videoUrl: "https://www.youtube.com/watch?v=bGXIt8zR3os", videoProvider: "Coach Mere" });
+  return demonstrations;
 }
 
 function buildResourceAwareWorkoutTemplates(profile: UserProfile, rounds: number): WorkoutTemplate[] {
@@ -591,6 +604,29 @@ export async function saveCompletionRatings(ratings: CompletionRating[]) {
   await AsyncStorage.setItem(completionRatingsStorageKey, JSON.stringify(ratings.slice(0, 180)));
 }
 
+/** Applies a local, today-only gear exclusion without changing the saved home setup. */
+export function applyTodayUnavailableResources(profile: UserProfile, unavailableResources: string[]): UserProfile {
+  const unavailable = new Set(unavailableResources.map((resource) => resource.trim().toLowerCase()));
+  const available = (resource: string) => !unavailable.has(resource.trim().toLowerCase());
+  return { ...profile, workoutResources: profile.workoutResources.filter(available), otherWorkoutResources: profile.otherWorkoutResources.filter(available) };
+}
+
+export async function loadTodayUnavailableResources(today = formatToday()): Promise<string[]> {
+  const saved = await AsyncStorage.getItem(todayUnavailableResourcesStorageKey);
+  if (!saved) return [];
+  try {
+    const entry = JSON.parse(saved) as TodayUnavailableResources;
+    return entry.date === today && Array.isArray(entry.resources) ? entry.resources : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function saveTodayUnavailableResources(resources: string[], today = formatToday()) {
+  const entry: TodayUnavailableResources = { date: today, resources: Array.from(new Set(resources.map((resource) => resource.trim()).filter(Boolean))).slice(0, 20) };
+  await AsyncStorage.setItem(todayUnavailableResourcesStorageKey, JSON.stringify(entry));
+}
+
 export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
   const localIngredients = profile.localIngredients.length ? profile.localIngredients : ["tomato", "onion", "leafy greens"];
   const storageNote = foodStorageNote(profile);
@@ -693,6 +729,7 @@ export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
       adaptation: `${difficulty.label} level. ${movementAdaptation(profile)} Keep the session pain-free; pause or choose a gentler option if anything feels wrong.`,
       resourcesUsed: workoutTemplates[index].resourcesUsed,
       resourceRationale: resourceRationale(profile, workoutResourceFlags(profile)),
+      resourceDemonstrations: resourceDemonstrationsFor(workoutTemplates[index].resourcesUsed),
       videoAvailable: workoutResourceFlags(profile).canStream,
       difficulty: profile.workoutDifficulty,
       instructorOptions,
