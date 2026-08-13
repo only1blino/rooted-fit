@@ -34,6 +34,7 @@ const microwaveProfile: UserProfile = {
   mealFrequency: "three",
   sweetToothPreference: "none",
   dailyStepCount: 3500,
+  aspirationalStepTarget: 5000,
   workoutMinutesPerDay: 20,
   workoutResources: ["Yoga mat", "Safe floor space"],
   otherWorkoutResources: [],
@@ -59,7 +60,7 @@ describe("RootedFit weekly plan builder", () => {
     expect(plan.meals[0].title).toContain("Nigerian jollof rice");
     expect(plan.meals[0].equipmentNote).toContain("microwave-only kitchen");
     expect(plan.meals[0].storageNote).toContain("same-day portions");
-    expect(plan.shoppingGroups[0].items).toContain("Beans, lentils, groundnuts, or another shelf-stable protein");
+    expect(plan.shoppingGroups[0].items).toContain("¾ cup parboiled rice");
     expect(plan.workouts[1].videoUrl).toContain("youtube.com");
     expect(plan.workouts[1].videoTitle).toContain("PILATES");
     expect(plan.dailyMeals[0].slots).toHaveLength(3);
@@ -92,6 +93,15 @@ describe("RootedFit weekly plan builder", () => {
   it("uses localized recipe packs for Ghana and Kenya", () => {
     expect(buildWeeklyPlan({ ...microwaveProfile, country: "Ghana" }).meals[0].title).toContain("Waakye");
     expect(buildWeeklyPlan({ ...microwaveProfile, country: "Kenya" }).meals[0].title).toContain("Githeri");
+  });
+
+  it("adjusts food emphasis and recipe-derived groceries for different primary focuses", () => {
+    const weightLossPlan = buildWeeklyPlan({ ...microwaveProfile, goal: "weight_loss" });
+    const weightGainPlan = buildWeeklyPlan({ ...microwaveProfile, goal: "weight_gain" });
+
+    expect(weightLossPlan.meals[0].focus).toContain("measured staple portion");
+    expect(weightGainPlan.meals[0].focus).toContain("fuller staple portion");
+    expect(weightGainPlan.shoppingGroups[0].items).toContain("1 small planned snack: groundnuts, yoghurt, milk, beans, or seeds if suitable");
   });
 
   it("persists the expanded onboarding profile locally", async () => {

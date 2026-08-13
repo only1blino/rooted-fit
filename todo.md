@@ -54,3 +54,11 @@
 - [x] Add a Ghana-specific recipe pack with coherent ingredient quantities and preparation steps
 - [x] Add a Kenya-specific recipe pack with coherent ingredient quantities and preparation steps
 - [x] Add tests and documentation for swaps, workout tracking, and localized recipe packs
+- [x] Enforce a maximum of four favourite fruits across both suggested and typed selections
+- [x] Add an aspirational daily step target for users building their walking habit
+- [x] Add a water tracker in Extras with millilitres, litres, ounces, cups, and bottle options
+- [x] Differentiate recipe portions and meal emphasis by primary wellness focus without unsafe claims
+- [x] Move the detailed grocery list to Meals and derive it from the week’s planned recipe ingredients
+- [x] Refactor Rooted Week into linked meal and workout summaries without duplicated detailed recipes
+- [x] Place Workouts before Extras in the tab order
+- [x] Add tests and documentation for targets, focus-aware plans, recipe-derived groceries, and linked summaries

@@ -25,6 +25,7 @@ export type UserProfile = {
   mealFrequency: MealFrequency;
   sweetToothPreference: SweetToothPreference;
   dailyStepCount: number;
+  aspirationalStepTarget: number;
   workoutMinutesPerDay: number;
   workoutResources: string[];
   otherWorkoutResources: string[];
@@ -112,6 +113,7 @@ export type ProgressPhoto = {
 
 export type MealSwap = { slotKey: string; recipeIndex: number };
 export type WorkoutSessionState = { workoutId: string; saved: boolean; completedAt: string | null };
+export type DailyWaterLog = { date: string; millilitres: number };
 
 export const profileStorageKey = "rootedfit.profile.v2";
 const legacyProfileStorageKey = "rootedfit.profile.v1";
@@ -120,6 +122,7 @@ export const measurementsStorageKey = "rootedfit.measurements.v1";
 export const progressPhotosStorageKey = "rootedfit.progress-photos.v1";
 export const mealSwapsStorageKey = "rootedfit.meal-swaps.v1";
 export const workoutSessionsStorageKey = "rootedfit.workout-sessions.v1";
+export const waterLogsStorageKey = "rootedfit.water-logs.v1";
 
 export const emptyProfile: UserProfile = {
   city: "",
@@ -138,6 +141,7 @@ export const emptyProfile: UserProfile = {
   mealFrequency: "three",
   sweetToothPreference: "none",
   dailyStepCount: 0,
+  aspirationalStepTarget: 0,
   workoutMinutesPerDay: 0,
   workoutResources: [],
   otherWorkoutResources: [],
@@ -262,7 +266,7 @@ export async function saveProfile(profile: UserProfile) {
 }
 
 export async function clearProfile() {
-  await AsyncStorage.multiRemove([profileStorageKey, legacyProfileStorageKey, checkInsStorageKey, measurementsStorageKey, progressPhotosStorageKey, mealSwapsStorageKey, workoutSessionsStorageKey]);
+  await AsyncStorage.multiRemove([profileStorageKey, legacyProfileStorageKey, checkInsStorageKey, measurementsStorageKey, progressPhotosStorageKey, mealSwapsStorageKey, workoutSessionsStorageKey, waterLogsStorageKey]);
 }
 
 export async function loadCheckIns(): Promise<DailyCheckIn[]> {
@@ -327,6 +331,16 @@ export async function saveWorkoutSessionStates(states: WorkoutSessionState[]) {
   await AsyncStorage.setItem(workoutSessionsStorageKey, JSON.stringify(states.slice(0, 100)));
 }
 
+export async function loadWaterLogs(): Promise<DailyWaterLog[]> {
+  const saved = await AsyncStorage.getItem(waterLogsStorageKey);
+  if (!saved) return [];
+  try { return JSON.parse(saved) as DailyWaterLog[]; } catch { return []; }
+}
+
+export async function saveWaterLogs(logs: DailyWaterLog[]) {
+  await AsyncStorage.setItem(waterLogsStorageKey, JSON.stringify(logs.slice(0, 90)));
+}
+
 export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
   const localIngredients = profile.localIngredients.length ? profile.localIngredients : ["tomato", "onion", "leafy greens"];
   const storageNote = foodStorageNote(profile);
@@ -364,7 +378,8 @@ export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
   const restrictionSafeRecipes = regionalRecipes.filter((recipe) => !excluded.some((item) => `${recipe.title} ${recipe.ingredients.join(" ")}`.toLowerCase().includes(item)));
   const plantBasedRecipes = restrictionSafeRecipes.filter((recipe) => !/(chicken|fish|egg|catfish)/i.test(`${recipe.title} ${recipe.ingredients.join(" ")}`));
   const usableRecipes = usesAnimalFoods ? restrictionSafeRecipes : plantBasedRecipes.length ? plantBasedRecipes : restrictionSafeRecipes;
-  const mealPlan = labels.map((label, index) => ({ ...(usableRecipes.length ? usableRecipes[index % usableRecipes.length] : regionalRecipes[0]), day: index + 1, label, storageNote, equipmentNote: recipeEquipmentNote }));
+  const focusAdjustment = profile.goal === "weight_loss" ? { note: "Use the measured staple portion shown and add an extra cup of available vegetables or greens where possible.", adapt: (items: string[]) => [...items.map((item) => item.replace("¾ cup", "½ cup")), "1 extra cup available leafy greens, cabbage, carrot, or cucumber"] } : profile.goal === "weight_gain" ? { note: "Use the fuller staple portion shown and include one extra planned snack or energy-dense addition that fits your preferences.", adapt: (items: string[]) => [...items.map((item) => item.replace("¾ cup", "1 cup").replace("½ cup", "¾ cup")), "1 small planned snack: groundnuts, yoghurt, milk, beans, or seeds if suitable"] } : profile.goal === "toning" ? { note: "Keep a regular staple portion and make the protein component intentional for this meal.", adapt: (items: string[]) => [...items, "1 intentional protein portion: beans, egg, fish, chicken, tofu, or another preferred option"] } : profile.goal === "energy" ? { note: "Keep this meal practical and include the available fruit or vegetable side listed for a steadier rhythm.", adapt: (items: string[]) => [...items, "1 available fruit or vegetable side"] } : { note: "Keep the portion practical for your day and use the ingredients you genuinely have.", adapt: (items: string[]) => items };
+  const mealPlan = labels.map((label, index) => { const recipe = usableRecipes.length ? usableRecipes[index % usableRecipes.length] : regionalRecipes[0]; const titleSuffix = profile.goal === "weight_loss" ? " with an extra vegetable side" : profile.goal === "weight_gain" ? " with a planned energy-supporting snack" : profile.goal === "toning" ? " with an intentional protein side" : profile.goal === "energy" ? " with a fruit or vegetable side" : ""; return { ...recipe, title: `${recipe.title}${titleSuffix}`, ingredients: focusAdjustment.adapt(recipe.ingredients), focus: `${recipe.focus}. ${focusAdjustment.note}`, day: index + 1, label, storageNote, equipmentNote: recipeEquipmentNote }; });
   const sweetToothSnack = profile.sweetToothPreference === "healthier_swaps" ? "Fruit with plain yoghurt or a small homemade cocoa-oat snack" : profile.sweetToothPreference === "portion_guidance" ? "A small chosen sweet portion served after a balanced meal, rather than eating from the packet" : "A small cup of pap, yoghurt, or another snack that fits your dietary notes";
   const snackIdeas = [`${fruit} with a small handful of groundnuts if suitable for you`, "Cucumber, carrot, or another crunchy vegetable with a familiar dip", sweetToothSnack];
   const slotLabels = profile.mealFrequency === "one_plus_snack" ? ["Main meal"] : profile.mealFrequency === "two" ? ["First meal", "Second meal"] : ["Breakfast", "Lunch", "Dinner"];
@@ -403,10 +418,9 @@ export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
     dailyMeals,
     workouts: workoutPlan,
     shoppingGroups: [
-      { title: "Durable pantry base", items: ["A grain, root, or starchy staple you enjoy", "Beans, lentils, groundnuts, or another shelf-stable protein", "Tinned or dried protein only if locally preferred", "Seasonings you already use"] },
-      { title: "Fresh produce", items: [...localIngredients.slice(0, 6), longerShopping ? "Firm produce that stores better between trips" : "Fresh items in quantities you can use"] },
-      { title: "Protein choices", items: ["A locally available protein you enjoy", "Eggs, fish, tofu, dairy, or another option that fits your dietary notes", "A shelf-stable backup for days with limited shopping or power"] },
-      { title: "Drinks and extras", items: ["Safe drinking water", "Fruit, citrus, ginger, herbs, or tea for simple drinks", "Ice or a cooler only when available and safe to use"] },
+      { title: "Ingredients from your planned recipes", items: Array.from(new Set(mealPlan.flatMap((meal) => meal.ingredients))).slice(0, 42) },
+      { title: "Helpful fresh extras", items: [...localIngredients.slice(0, 6), profile.favoriteFruits[0] ? profile.favoriteFruits[0] : "A fruit you enjoy"] },
+      { title: "Storage reminder", items: [longerShopping ? "Choose only quantities you can safely store until your next shop." : "Choose quantities you can use while fresh."] },
     ],
   };
 }
