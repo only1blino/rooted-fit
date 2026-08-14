@@ -160,4 +160,4 @@
 - [x] Audit current city coverage and research additional tester-city meal packs
 - [x] Add dedicated reviewed two-week recipe packs for priority tester cities
 - [x] Add a clear city-country match confirmation and correction control to onboarding
-- [ ] Add regression coverage, validate, publish, and push the expanded location-control release
+- [x] Add regression coverage, validate, publish, and push the expanded location-control release
