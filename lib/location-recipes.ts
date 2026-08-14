@@ -1,6 +1,6 @@
-import { cityFoodPack, type FoodCountry } from "./food-catalogue";
+import { resolveFoodLocation, type FoodCountry } from "./food-catalogue";
 
-export type LocationRecipe = { title: string; focus: string; ingredients: string[]; steps: string[]; drink: string };
+export type LocationRecipe = { title: string; focus: string; ingredients: string[]; steps: string[]; drink: string; originCountry?: FoodCountry };
 type RecipeSeed = { title: string; focus: string; ingredients: string[] };
 
 const COUNTRY_RECIPES: Record<Exclude<FoodCountry, "Nigeria" | "Ghana" | "Kenya">, { weekOne: RecipeSeed[]; weekTwo: RecipeSeed[] }> = {
@@ -64,6 +64,26 @@ const COUNTRY_RECIPES: Record<Exclude<FoodCountry, "Nigeria" | "Ghana" | "Kenya"
       { title: "Sardine, tomato, and kale rice pot", focus: "An affordable fish-and-greens meal with rice", ingredients: ["½ cup brown rice", "1 sardine portion", "tinned tomatoes", "kale", "onion"] },
     ],
   },
+  Canada: {
+    weekOne: [
+      { title: "Red lentil and vegetable soup with wholegrain toast", focus: "A Toronto pantry-led soup with lentils, frozen or fresh vegetables, and bread", ingredients: ["¾ cup red lentils", "1 carrot", "½ onion", "1 cup frozen mixed vegetables", "low-sodium stock or water", "1 slice wholegrain toast"] },
+      { title: "Tinned salmon, potato, and greens bowl", focus: "A practical Canadian grocery meal using shelf-stable fish and durable vegetables", ingredients: ["1 tinned salmon portion", "1 potato", "1 cup spinach or kale", "½ onion", "lemon or herbs", "1 teaspoon oil"] },
+      { title: "Bean and vegetable chilli with brown rice", focus: "A make-once, use-again tomato and bean pot built from Toronto supermarket staples", ingredients: ["¾ cup black or kidney beans", "½ cup brown rice", "tinned tomatoes", "½ onion", "bell pepper", "chilli powder"] },
+      { title: "Mushroom barley skillet with peas", focus: "A filling barley and vegetable meal using accessible mushrooms and frozen peas", ingredients: ["½ cup pearl barley", "1 cup mushrooms", "½ cup frozen peas", "½ onion", "low-sodium stock or water", "herbs"] },
+      { title: "Sheet-pan chicken with carrots, potatoes, and broccoli", focus: "A simple cold-weather tray meal with Ontario-style root vegetables", ingredients: ["1 chicken portion", "1 potato", "2 carrots", "1 cup broccoli", "1 teaspoon oil", "garlic or herbs"] },
+      { title: "Tofu, broccoli, and brown rice stir-fry", focus: "A flexible plant-based meal using fresh or frozen vegetables", ingredients: ["¾ cup firm tofu", "½ cup brown rice", "1 cup broccoli", "½ cup peppers", "garlic", "1 teaspoon oil"] },
+      { title: "Chickpea tomato pasta with spinach", focus: "A quick cupboard meal built from pasta, chickpeas, tomatoes, and greens", ingredients: ["½ cup wholewheat pasta", "¾ cup chickpeas", "tinned tomatoes", "1 cup spinach", "½ onion", "herbs"] },
+    ],
+    weekTwo: [
+      { title: "Potato, white bean, and cabbage soup", focus: "A hearty cool-season Toronto meal with durable vegetables and beans", ingredients: ["1 potato", "¾ cup white beans", "1 cup cabbage", "1 carrot", "½ onion", "low-sodium stock or water"] },
+      { title: "Turkey or lentil tomato meatballs with wholewheat pasta", focus: "A flexible familiar pasta meal with a lentil alternative", ingredients: ["turkey mince or cooked lentils", "½ cup wholewheat pasta", "tinned tomatoes", "½ onion", "carrot", "Italian-style herbs"] },
+      { title: "Baked sweet potato with black beans and corn", focus: "A practical oven or microwave-friendly bowl with beans and vegetables", ingredients: ["1 sweet potato", "¾ cup black beans", "½ cup corn", "tomato", "plain yoghurt if suitable", "lime or herbs"] },
+      { title: "Tuna, cucumber, and chickpea grain bowl", focus: "A low-cook meal using tinned fish, chickpeas, and a cold vegetable side", ingredients: ["1 tinned tuna portion", "¾ cup chickpeas", "½ cup brown rice or couscous", "½ cucumber", "tomato", "lemon or herbs"] },
+      { title: "Egg, mushroom, and kale potato hash", focus: "A practical breakfast-for-dinner option with local durable vegetables", ingredients: ["2 eggs", "1 potato", "1 cup mushrooms", "1 cup kale or spinach", "½ onion", "1 teaspoon oil"] },
+      { title: "Peanut tofu noodle bowl with cabbage", focus: "A plant-based second-week meal using cabbage, tofu, and a simple pantry sauce", ingredients: ["¾ cup tofu", "½ cup wholewheat noodles", "1 cup cabbage", "1 carrot", "1 teaspoon peanut butter", "ginger"] },
+      { title: "Chicken and frozen vegetable barley pot", focus: "A batch-friendly supper built around frozen vegetables and a shelf-stable grain", ingredients: ["1 chicken portion", "½ cup pearl barley", "1 cup frozen mixed vegetables", "½ onion", "low-sodium stock or water", "herbs"] },
+    ],
+  },
   Other: {
     weekOne: [
       { title: "Lentil, tomato, and rice pot", focus: "A flexible city-market starter recipe", ingredients: ["¾ cup lentils", "½ cup rice", "tomato", "onion", "leafy greens"] },
@@ -86,13 +106,18 @@ const COUNTRY_RECIPES: Record<Exclude<FoodCountry, "Nigeria" | "Ghana" | "Kenya"
   },
 };
 
-function toRecipe(seed: RecipeSeed, fruit: string): LocationRecipe {
-  return { title: seed.title, focus: seed.focus, ingredients: seed.ingredients, steps: ["Prepare the grain, root, or staple using the method that is normal in your home.", "Cook the tomato, onion, protein or beans, and vegetables in stages until tender.", "Taste, adjust seasoning if you use it, and serve with the planned fresh vegetables or fruit."], drink: `Water and ${fruit} later in the day.` };
+function toRecipe(seed: RecipeSeed, fruit: string, originCountry: FoodCountry): LocationRecipe {
+  return { title: seed.title, focus: seed.focus, ingredients: seed.ingredients, steps: ["Prepare the grain, root, or staple using the method that is normal in your home.", "Cook the tomato, onion, protein or beans, and vegetables in stages until tender.", "Taste, adjust seasoning if you use it, and serve with the planned fresh vegetables or fruit."], drink: `Water and ${fruit} later in the day.`, originCountry };
 }
 
 function cityRecipes(country: FoodCountry, city: string, fruit: string): { weekOne: LocationRecipe[]; weekTwo: LocationRecipe[] } | null {
-  const pack = cityFoodPack(country, city);
+  const resolved = resolveFoodLocation(country, city);
+  const pack = resolved.pack;
   if (!pack) return null;
+  if (resolved.country === "Canada" && pack.aliases.includes("toronto")) {
+    const toronto = COUNTRY_RECIPES.Canada;
+    return { weekOne: toronto.weekOne.map((recipe) => toRecipe(recipe, fruit, "Canada")), weekTwo: toronto.weekTwo.map((recipe) => toRecipe(recipe, fruit, "Canada")) };
+  }
   const foods = pack.foods.length ? pack.foods : ["beans", "tomato", "onion", "leafy greens"];
   const create = (title: string, index: number, rotation: string): LocationRecipe => ({
     title: `${title} · ${pack.label.replace(" market cues", " home option")}`,
@@ -100,6 +125,7 @@ function cityRecipes(country: FoodCountry, city: string, fruit: string): { weekO
     ingredients: [foods[index % foods.length], foods[(index + 1) % foods.length], foods[(index + 2) % foods.length], "tomato or another available vegetable", "onion or another aromatic", "a staple you already use"],
     steps: ["Prepare the staple using the method that is normal in your home.", "Cook the chosen vegetables with the beans, egg, fish, or other preferred protein until tender.", "Serve the practical portion with a fresh vegetable or fruit if available."],
     drink: `Water and ${fruit} later in the day.`,
+    originCountry: resolved.country,
   });
   const weekOneLabels = ["market plate", "weekday pot", "fresh-side bowl", "home-style supper", "pantry-friendly plate", "light meal-day option", "family-table variation"];
   const weekTwoLabels = ["second-week greens variation", "different staple variation", "vegetable-forward pot", "fresh-market plate", "bean or protein variation", "lighter meal-day option", "new-week supper"];
@@ -112,6 +138,8 @@ function cityRecipes(country: FoodCountry, city: string, fruit: string): { weekO
 export function locationRecipeWeeks(country: FoodCountry, city: string, fruit: string): { weekOne: LocationRecipe[]; weekTwo: LocationRecipe[] } {
   const citySpecific = cityRecipes(country, city, fruit);
   if (citySpecific) return citySpecific;
+  const resolved = resolveFoodLocation(country, city);
+  country = resolved.country;
   if (country === "Nigeria") return { weekOne: [], weekTwo: [
     { title: "Unripe plantain porridge with spinach", focus: "A savoury second-week Nigerian plantain-and-greens pot", ingredients: ["½ unripe plantain", "½ onion", "1 tomato", "1 cup spinach", "fish or beans if suitable"], steps: ["Peel and cube unripe plantain, then simmer in water until almost tender.", "Add tomato, onion, and fish or beans; cook until the plantain softens.", "Fold in spinach just before serving."], drink: `Water and ${fruit} later in the day.` },
     { title: "Okra soup with a small eba portion", focus: "A familiar Nigerian soup meal with a clear vegetable base", ingredients: ["2 cups okra", "1 fish portion", "½ onion", "palm oil", "1 small eba portion"], steps: ["Cook fish and onion with a little water until the fish is cooked.", "Add sliced okra and palm oil, stirring until the okra softens.", "Prepare one small eba portion and serve."], drink: `Water and ${fruit} later in the day.` },
@@ -140,5 +168,51 @@ export function locationRecipeWeeks(country: FoodCountry, city: string, fruit: s
     { title: "Lentil curry with ugali", focus: "A plant-based Kenyan legume meal with maize staple", ingredients: ["¾ cup lentils", "½ cup maize flour", "tomato", "onion", "curry spice", "greens"], steps: ["Simmer lentils with tomato, onion, and spices until tender.", "Cook maize flour into ugali.", "Serve with greens."], drink: `Water and ${fruit} later in the day.` },
   ] };
   const pack = COUNTRY_RECIPES[country];
-  return { weekOne: pack.weekOne.map((recipe) => toRecipe(recipe, fruit)), weekTwo: pack.weekTwo.map((recipe) => toRecipe(recipe, fruit)) };
+  return { weekOne: pack.weekOne.map((recipe) => toRecipe(recipe, fruit, country)), weekTwo: pack.weekTwo.map((recipe) => toRecipe(recipe, fruit, country)) };
+}
+
+const BREAKFAST_RECIPES: Record<FoodCountry, RecipeSeed[]> = {
+  Nigeria: [
+    { title: "Moi moi with cucumber and tomato", focus: "A familiar Nigerian bean breakfast with a light vegetable side", ingredients: ["1 small moi moi portion", "½ cucumber", "1 tomato", "1 boiled egg if suitable"] },
+    { title: "Pap with egg and groundnuts", focus: "A warm, easy Nigerian breakfast with a defined protein addition", ingredients: ["¾ cup pap", "1 egg", "1 tablespoon groundnuts", "1 portion fruit"] },
+  ],
+  Ghana: [
+    { title: "Millet porridge with egg and fruit", focus: "A light Ghanaian-style breakfast with a clear protein side", ingredients: ["½ cup millet porridge", "1 egg", "1 portion fruit", "groundnuts"] },
+    { title: "Red red leftovers with baked plantain", focus: "A practical use of a familiar Ghanaian bean meal", ingredients: ["½ cup cooked beans", "½ ripe plantain", "tomato", "onion"] },
+  ],
+  Kenya: [
+    { title: "Arrowroot with egg and avocado", focus: "A Kenyan breakfast built around a familiar root and simple protein", ingredients: ["1 arrowroot or sweet potato", "1 egg", "½ avocado", "tomato"] },
+    { title: "Millet porridge with groundnuts and fruit", focus: "A gentle Kenyan breakfast using a familiar grain", ingredients: ["½ cup millet porridge", "1 tablespoon groundnuts", "1 portion fruit", "milk if suitable"] },
+  ],
+  "South Africa": [
+    { title: "Amasi oats with apple and seeds", focus: "A light South African breakfast using amasi or plain yoghurt", ingredients: ["¾ cup amasi or plain yoghurt", "¼ cup oats", "1 apple", "1 tablespoon seeds"] },
+    { title: "Egg, tomato, and wholegrain toast", focus: "A quick protein-forward breakfast with familiar local supermarket foods", ingredients: ["2 eggs", "1 tomato", "1 slice wholegrain toast", "1 teaspoon oil"] },
+  ],
+  "United Kingdom": [
+    { title: "Porridge with pear and seeds", focus: "A quick UK pantry breakfast using oats and fruit", ingredients: ["½ cup oats", "1 pear or apple", "1 tablespoon seeds", "milk or fortified alternative"] },
+    { title: "Egg, mushrooms, and wholegrain toast", focus: "A simple British supermarket breakfast with protein and vegetables", ingredients: ["2 eggs", "1 cup mushrooms", "1 slice wholegrain toast", "1 tomato"] },
+  ],
+  "United States": [
+    { title: "Oatmeal with berries and peanut butter", focus: "A quick US pantry breakfast with fruit and a filling addition", ingredients: ["½ cup oats", "berries", "1 teaspoon peanut butter", "milk or fortified alternative"] },
+    { title: "Egg and sweet potato breakfast skillet", focus: "A practical protein-forward breakfast with a durable root vegetable", ingredients: ["2 eggs", "1 small sweet potato", "spinach", "½ onion"] },
+  ],
+  Canada: [
+    { title: "Ontario apple oatmeal with yoghurt and seeds", focus: "A Toronto breakfast based on oats, apples, yoghurt, and shelf-stable seeds", ingredients: ["½ cup oats", "1 apple", "¾ cup plain yoghurt or fortified soy yoghurt", "1 tablespoon pumpkin or sunflower seeds"] },
+    { title: "Egg, mushroom, and spinach toast", focus: "A quick Toronto supermarket breakfast with vegetables and wholegrain bread", ingredients: ["2 eggs", "1 cup mushrooms", "½ cup spinach", "1 slice wholegrain toast", "1 teaspoon oil"] },
+    { title: "Cottage cheese, pear, and wholegrain toast", focus: "A no-fuss breakfast using common Canadian grocery staples", ingredients: ["¾ cup cottage cheese or plain yoghurt", "1 pear", "1 slice wholegrain toast", "cinnamon if enjoyed"] },
+    { title: "Peanut butter banana oats with milk", focus: "A low-prep breakfast with pantry oats and fruit", ingredients: ["½ cup oats", "1 banana", "1 teaspoon peanut butter", "milk or fortified soy milk"] },
+    { title: "Tofu, pepper, and potato breakfast hash", focus: "A plant-based Toronto breakfast using durable vegetables", ingredients: ["¾ cup firm tofu", "1 potato", "½ cup peppers", "½ onion", "1 teaspoon oil"] },
+    { title: "Tinned salmon and cucumber toast", focus: "A simple breakfast or light meal using shelf-stable fish", ingredients: ["1 tinned salmon portion", "1 slice wholegrain toast", "½ cucumber", "plain yoghurt or mustard if suitable"] },
+    { title: "Yoghurt berry oats cup", focus: "A no-cook option where reliable cold storage is available", ingredients: ["¾ cup plain yoghurt or fortified soy yoghurt", "¼ cup oats", "berries", "1 tablespoon seeds"] },
+  ],
+  Other: [
+    { title: "Egg and vegetable breakfast with a local staple", focus: "A locality-safe protein breakfast that lets the user choose their familiar staple", ingredients: ["2 eggs", "tomato", "onion", "leafy greens", "small local staple portion"] },
+    { title: "Oats, fruit, and seeds", focus: "A simple light breakfast when oats and safe cold storage are available", ingredients: ["½ cup oats", "1 portion fruit", "1 tablespoon seeds or groundnuts", "milk or yoghurt if suitable"] },
+  ],
+};
+
+/** Breakfast uses the same resolved country boundary as lunch and dinner; it cannot silently fall back to a Nigerian template. */
+export function locationBreakfastRecipes(country: FoodCountry, city: string, fruit: string): LocationRecipe[] {
+  const resolved = resolveFoodLocation(country, city);
+  return BREAKFAST_RECIPES[resolved.country].map((recipe) => toRecipe(recipe, fruit, resolved.country));
 }

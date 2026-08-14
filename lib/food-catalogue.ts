@@ -1,6 +1,6 @@
-export type FoodCountry = "Nigeria" | "Ghana" | "Kenya" | "South Africa" | "United Kingdom" | "United States" | "Other";
+export type FoodCountry = "Nigeria" | "Ghana" | "Kenya" | "South Africa" | "United Kingdom" | "United States" | "Canada" | "Other";
 
-export const COUNTRY_OPTIONS: FoodCountry[] = ["Nigeria", "Ghana", "Kenya", "South Africa", "United Kingdom", "United States", "Other"];
+export const COUNTRY_OPTIONS: FoodCountry[] = ["Nigeria", "Ghana", "Kenya", "South Africa", "United Kingdom", "United States", "Canada", "Other"];
 
 type CityFoodPack = { aliases: string[]; label: string; foods: string[]; meals: string[]; fruits: string[] };
 
@@ -11,6 +11,7 @@ const CATALOGUES: Record<FoodCountry, string[]> = {
   "South Africa": ["Pap", "Samp", "Mealie meal", "Brown rice", "Oats", "Sweet potato", "Butternut", "Potato", "Beans", "Lentils", "Chickpeas", "Eggs", "Chicken", "Pilchards", "Hake", "Tinned fish", "Lean beef", "Mince", "Plain yoghurt", "Amasi", "Spinach", "Moroho", "Cabbage", "Tomato", "Onion", "Carrot", "Green beans", "Peppers", "Beetroot", "Avocado", "Apple", "Orange", "Banana", "Mango", "Pineapple", "Papaya", "Grapes", "Watermelon", "Peach", "Pear", "Maize", "Sorghum", "Peanut butter", "Sunflower seeds", "Pumpkin seeds", "Rooibos tea", "Ginger", "Garlic", "Curry spice", "Chakalaka vegetables"],
   "United Kingdom": ["Oats", "Wholegrain bread", "Potatoes", "Sweet potatoes", "Brown rice", "Wholewheat pasta", "Couscous", "Lentils", "Chickpeas", "Kidney beans", "Eggs", "Chicken", "Tinned mackerel", "Salmon", "Tuna", "Lean beef", "Plain yoghurt", "Milk", "Tofu", "Cheddar", "Spinach", "Kale", "Broccoli", "Cabbage", "Carrot", "Tomato", "Onion", "Peppers", "Cucumber", "Frozen mixed vegetables", "Apple", "Banana", "Orange", "Berries", "Pears", "Grapes", "Melon", "Pineapple", "Avocado", "Kiwi", "Peanut butter", "Olive oil", "Rapeseed oil", "Seeds", "Walnuts", "Tea", "Herbs", "Garlic", "Ginger", "Tinned tomatoes"],
   "United States": ["Oats", "Wholegrain bread", "Brown rice", "Quinoa", "Potatoes", "Sweet potatoes", "Wholewheat pasta", "Black beans", "Kidney beans", "Lentils", "Chickpeas", "Eggs", "Chicken", "Turkey", "Salmon", "Tuna", "Sardines", "Lean beef", "Greek yoghurt", "Tofu", "Spinach", "Kale", "Broccoli", "Cabbage", "Carrot", "Tomato", "Onion", "Peppers", "Cucumber", "Frozen vegetables", "Apple", "Banana", "Orange", "Berries", "Grapes", "Melon", "Pineapple", "Mango", "Avocado", "Peach", "Peanut butter", "Olive oil", "Nuts", "Seeds", "Corn", "Popcorn", "Herbs", "Garlic", "Ginger", "Tinned tomatoes"],
+  Canada: ["Oats", "Wholegrain bread", "Potatoes", "Sweet potatoes", "Brown rice", "Barley", "Wholewheat pasta", "Red lentils", "Chickpeas", "Black beans", "Kidney beans", "Eggs", "Chicken", "Tinned salmon", "Tinned tuna", "Tofu", "Plain yoghurt", "Milk or fortified soy milk", "Cheddar", "Cottage cheese", "Spinach", "Kale", "Broccoli", "Cabbage", "Carrots", "Mushrooms", "Tomatoes", "Onions", "Peppers", "Frozen mixed vegetables", "Apples", "Pears", "Berries", "Grapes", "Oranges", "Bananas", "Ontario apples", "Maple syrup", "Peanut butter", "Canola oil", "Olive oil", "Pumpkin seeds", "Sunflower seeds", "Tinned tomatoes", "Low-sodium stock", "Herbs", "Garlic", "Ginger"],
   Other: ["Rice", "Oats", "Maize", "Millet", "Sorghum", "Yam", "Cassava", "Plantain", "Sweet potato", "Potato", "Beans", "Lentils", "Chickpeas", "Groundnuts", "Eggs", "Chicken", "Fish", "Tinned fish", "Tofu", "Lean meat", "Leafy greens", "Cabbage", "Carrot", "Tomato", "Onion", "Peppers", "Cucumber", "Okra", "Pumpkin", "Orange", "Banana", "Mango", "Pineapple", "Papaya", "Watermelon", "Apple", "Avocado", "Coconut", "Dates", "Olive oil", "Palm oil", "Peanut butter", "Nuts", "Seeds", "Yoghurt", "Milk", "Ginger", "Garlic", "Herbs and spices"],
 };
 
@@ -21,6 +22,7 @@ const MEAL_SUGGESTIONS: Record<FoodCountry, string[]> = {
   "South Africa": ["Pap and chakalaka", "Samp and beans", "Moroho and pap", "Pilchards and rice", "Bean curry and roti"],
   "United Kingdom": ["Jacket potato and beans", "Porridge", "Lentil soup and bread", "Chicken and vegetables", "Baked beans on toast"],
   "United States": ["Beans and rice", "Oatmeal", "Chicken and vegetables", "Vegetable pasta", "Black bean corn bowl"],
+  Canada: ["Lentil and vegetable soup", "Sheet-pan chicken with root vegetables", "Salmon and potato bowl", "Bean and vegetable chilli", "Mushroom and barley stew", "Oatmeal with apple and seeds"],
   Other: ["Rice and beans", "Vegetable stew", "Porridge", "Soup and a staple", "Egg and vegetable bowl"],
 };
 
@@ -31,6 +33,7 @@ const FRUITS: Record<FoodCountry, string[]> = {
   "South Africa": ["Apple", "Orange", "Banana", "Mango", "Pineapple", "Papaya", "Grapes", "Watermelon", "Peach", "Pear", "Avocado", "Naartjie"],
   "United Kingdom": ["Apple", "Banana", "Orange", "Berries", "Pear", "Grapes", "Melon", "Pineapple", "Avocado", "Kiwi", "Mango", "Peach"],
   "United States": ["Apple", "Banana", "Orange", "Berries", "Grapes", "Melon", "Pineapple", "Mango", "Avocado", "Peach", "Pear", "Watermelon"],
+  Canada: ["Apple", "Pear", "Berries", "Grapes", "Orange", "Banana", "Peach", "Plum", "Melon", "Pineapple", "Mango", "Kiwi"],
   Other: ["Banana", "Orange", "Mango", "Pineapple", "Papaya", "Watermelon", "Apple", "Avocado", "Grapes", "Guava", "Pear", "Dates"],
 };
 
@@ -61,6 +64,11 @@ const CITY_PACKS: Record<FoodCountry, CityFoodPack[]> = {
     { aliases: ["los angeles", "san diego", "phoenix", "el paso"], label: "Southwest market cues", foods: ["Pinto beans", "Corn tortillas", "Avocado", "Salsa ingredients"], meals: ["Bean and corn tacos", "Vegetable burrito bowl", "Chicken tortilla soup"], fruits: ["Orange", "Mango"] },
     { aliases: ["new york", "chicago", "detroit", "boston"], label: "US city market cues", foods: ["Brown rice", "Kale", "Canned salmon", "Sweet potatoes"], meals: ["Salmon rice bowl", "Sweet potato and bean tray", "Vegetable pasta"], fruits: ["Apple", "Berries"] },
   ],
+  Canada: [
+    { aliases: ["toronto", "north york", "scarborough", "etobicoke", "mississauga", "brampton", "markham"], label: "Toronto and GTA market cues", foods: ["Ontario apples", "Potatoes", "Carrots", "Cabbage", "Mushrooms", "Frozen vegetables", "Tinned salmon", "Red lentils"], meals: ["Lentil and vegetable soup", "Salmon and potato bowl", "Bean and vegetable chilli", "Mushroom barley stew", "Sheet-pan chicken with root vegetables", "Tofu vegetable stir-fry"], fruits: ["Apple", "Pear", "Berries"] },
+    { aliases: ["vancouver", "surrey", "burnaby", "richmond"], label: "Metro Vancouver market cues", foods: ["Salmon", "Tofu", "Bok choy", "Mushrooms", "Brown rice", "Frozen edamame"], meals: ["Salmon rice bowl", "Tofu and bok choy stir-fry", "Vegetable lentil soup"], fruits: ["Berries", "Apple"] },
+    { aliases: ["montreal", "laval", "longueuil"], label: "Montréal market cues", foods: ["Lentils", "Potatoes", "Carrots", "Cabbage", "Eggs", "Tinned fish"], meals: ["Lentil vegetable soup", "Potato and bean skillet", "Tinned fish salad with bread"], fruits: ["Apple", "Pear"] },
+  ],
   Other: [
     { aliases: ["mumbai", "delhi", "bengaluru", "bangalore", "hyderabad", "pune"], label: "Indian city market cues", foods: ["Toor dal", "Chickpeas", "Okra", "Cumin", "Turmeric"], meals: ["Dal and rice", "Chana masala", "Vegetable khichdi"], fruits: ["Guava", "Papaya"] },
     { aliases: ["karachi", "lahore", "islamabad"], label: "Pakistan city market cues", foods: ["Masoor dal", "Basmati rice", "Okra", "Coriander"], meals: ["Daal chawal", "Chickpea curry", "Chicken vegetable pulao"], fruits: ["Guava", "Dates"] },
@@ -78,17 +86,44 @@ const CITY_PACKS: Record<FoodCountry, CityFoodPack[]> = {
 
 function unique(values: string[]) { return Array.from(new Set(values)); }
 
-export function cityFoodPack(country: FoodCountry, city = "") {
+export type ResolvedFoodLocation = { country: FoodCountry; city: string; pack: CityFoodPack | null; isCityMatch: boolean };
+
+/** Resolves a known city globally so an accidentally retained default country cannot leak another cuisine into the plan. */
+export function resolveFoodLocation(country: FoodCountry, city = ""): ResolvedFoodLocation {
   const normalized = city.trim().toLowerCase();
-  return CITY_PACKS[country].find((pack) => pack.aliases.some((alias) => normalized.includes(alias)));
+  for (const [candidateCountry, packs] of Object.entries(CITY_PACKS) as [FoodCountry, CityFoodPack[]][]) {
+    const pack = packs.find((candidate) => candidate.aliases.some((alias) => normalized.includes(alias)));
+    if (pack) return { country: candidateCountry, city: city.trim(), pack, isCityMatch: true };
+  }
+  return { country, city: city.trim(), pack: null, isCityMatch: false };
+}
+
+export function cityFoodPack(country: FoodCountry, city = "") {
+  return resolveFoodLocation(country, city).pack;
 }
 
 export function locationSuggestionLabel(country: FoodCountry, city = "") {
-  const pack = cityFoodPack(country, city);
+  const resolved = resolveFoodLocation(country, city);
+  const pack = resolved.pack;
   if (pack) return pack.label;
   return city.trim() ? `${city.trim()}, ${country} starter suggestions` : `${country} starter suggestions`;
 }
 
-export function suggestedFoods(country: FoodCountry, city = "") { const pack = cityFoodPack(country, city); return unique([...(pack?.foods ?? []), ...CATALOGUES[country]]).slice(0, 50); }
-export function suggestedFruits(country: FoodCountry, city = "") { const pack = cityFoodPack(country, city); return unique([...(pack?.fruits ?? []), ...FRUITS[country]]).slice(0, 12); }
-export function suggestedMeals(country: FoodCountry, city = "") { const pack = cityFoodPack(country, city); return unique([...(pack?.meals ?? []), ...MEAL_SUGGESTIONS[country]]); }
+export function suggestedFoods(country: FoodCountry, city = "") { const resolved = resolveFoodLocation(country, city); return unique([...(resolved.pack?.foods ?? []), ...CATALOGUES[resolved.country]]).slice(0, 50); }
+export function suggestedFruits(country: FoodCountry, city = "") { const resolved = resolveFoodLocation(country, city); return unique([...(resolved.pack?.fruits ?? []), ...FRUITS[resolved.country]]).slice(0, 12); }
+export function suggestedMeals(country: FoodCountry, city = "") { const resolved = resolveFoodLocation(country, city); return unique([...(resolved.pack?.meals ?? []), ...MEAL_SUGGESTIONS[resolved.country]]); }
+/** Cultural meal ideas are displayed only after the user explicitly elects a food heritage; they never alter a city default on their own. */
+export function heritageMealSuggestions(preferences: FoodCountry[]) { return unique(preferences.flatMap((country) => MEAL_SUGGESTIONS[country])); }
+
+/** Seasonal cues are optional market prompts, not a claim that each item is guaranteed or affordable today. */
+export function seasonalFoodCues(country: FoodCountry, city = "", date = new Date()) {
+  const resolved = resolveFoodLocation(country, city);
+  if (resolved.country === "Canada" && resolved.pack?.aliases.includes("toronto")) {
+    const month = date.getMonth() + 1;
+    if ([6, 7, 8, 9].includes(month)) return ["Ontario berries or peaches", "Sweet corn", "Field tomatoes", "Broccoli or green beans"];
+    if ([10, 11].includes(month)) return ["Ontario apples or pears", "Winter squash", "Carrots", "Cabbage or kale"];
+    if ([12, 1, 2, 3].includes(month)) return ["Ontario apples from storage", "Carrots", "Potatoes", "Greenhouse tomatoes or peppers"];
+    return ["Rhubarb or greenhouse strawberries", "Asparagus", "Mushrooms", "Greenhouse greens"];
+  }
+  return [];
+}

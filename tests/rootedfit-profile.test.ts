@@ -15,11 +15,12 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
 }));
 
 import { applyTodayResourceSubstitutions, applyTodayUnavailableResources, buildGymResultSummary, buildMonthlyTrendSeries, buildMonthProgressSummary, buildWeeklyPlan, buildWorkoutSessionPreview, buildWorkoutWhyToday, categorizeGroceryItems, findSimilarRecipe, formatGroceryChecklistPrintHtml, formatGroceryListExport, getTodayResourceSubstituteOptions, isReminderPauseActive, loadCheckIns, loadCompletionRatings, loadExerciseLogs, loadGroceryChecklist, loadMealSwaps, loadMeasurements, loadPlannedSessionReminder, loadProfile, loadProgressPhotos, loadResourceChangeFeedback, loadTodayResourceSubstitutions, loadTodayUnavailableResources, loadWorkoutSessionStates, normaliseReminderTime, normaliseReminderWeekdays, numberOrNull, oneWeekReminderPauseUntil, practicalGroceryItems, reminderMotivationText, rotatingIndexForDate, saveCheckIns, saveCompletionRatings, saveExerciseLogs, saveGroceryChecklist, saveMealSwaps, saveMeasurements, savePlannedSessionReminder, saveProfile, saveProgressPhotos, saveResourceChangeFeedback, saveTodayResourceSubstitutions, saveTodayUnavailableResources, saveWorkoutSessionStates, splitList, upsertCityRecipeRating, type UserProfile } from "../lib/rootedfit-profile";
-import { locationSuggestionLabel, suggestedFoods, suggestedFruits, suggestedMeals } from "../lib/food-catalogue";
+import { locationSuggestionLabel, seasonalFoodCues, suggestedFoods, suggestedFruits, suggestedMeals } from "../lib/food-catalogue";
 
 const microwaveProfile: UserProfile = {
   city: "Lagos",
   country: "Nigeria",
+  foodHeritagePreferences: [],
   electricityHoursPerDay: 12,
   marketMinutesAway: 20,
   shoppingFrequency: "biweekly",
@@ -96,8 +97,8 @@ describe("RootedFit weekly plan builder", () => {
   });
 
   it("uses localized recipe packs for Ghana and Kenya", () => {
-    expect(buildWeeklyPlan({ ...microwaveProfile, country: "Ghana" }).meals[0].title).toContain("Waakye");
-    expect(buildWeeklyPlan({ ...microwaveProfile, country: "Kenya" }).meals[0].title).toContain("Githeri");
+    expect(buildWeeklyPlan({ ...microwaveProfile, country: "Ghana", city: "Accra" }).meals[0].title).toContain("Kenkey");
+    expect(buildWeeklyPlan({ ...microwaveProfile, country: "Kenya", city: "Nairobi" }).meals[0].title).toContain("Ndengu");
   });
 
   it("adjusts food emphasis and recipe-derived groceries for different primary focuses", () => {
@@ -361,6 +362,22 @@ describe("RootedFit weekly plan builder", () => {
 
     expect(buildWeeklyPlan({ ...microwaveProfile, country: "Kenya", city: "Mombasa" }).meals[0].title).toContain("Coconut fish stew");
     expect(buildWeeklyPlan({ ...microwaveProfile, country: "Other", city: "Manila" }).meals[0].title).toContain("Mung bean stew");
+  });
+
+  it("resolves Toronto to Canada even when Nigeria remains selected and prevents Nigerian foods from leaking into any Toronto meal slot", () => {
+    const torontoWeekOne = buildWeeklyPlan({ ...microwaveProfile, country: "Nigeria", city: "Toronto", rotationWeek: 1 });
+    const torontoWeekTwo = buildWeeklyPlan({ ...microwaveProfile, country: "Nigeria", city: "Toronto", rotationWeek: 2 });
+    const visibleTorontoMeals = JSON.stringify({ meals: torontoWeekOne.meals, breakfasts: torontoWeekOne.breakfastMeals, dailyMeals: torontoWeekOne.dailyMeals }).toLowerCase();
+
+    expect(locationSuggestionLabel("Nigeria", "Toronto")).toContain("Toronto and GTA");
+    expect(suggestedFoods("Nigeria", "Toronto").slice(0, 4)).toEqual(expect.arrayContaining(["Ontario apples", "Potatoes", "Carrots"]));
+    expect(seasonalFoodCues("Nigeria", "Toronto", new Date("2026-08-14T12:00:00.000Z"))).toEqual(expect.arrayContaining(["Ontario berries or peaches", "Sweet corn"]));
+    expect(torontoWeekOne.meals[0].sourceTitle).toContain("Red lentil and vegetable soup");
+    expect(torontoWeekOne.dailyMeals[0].slots[0].meal.sourceTitle).toContain("Ontario apple oatmeal");
+    expect(torontoWeekOne.meals.every((meal) => meal.originCountry === "Canada")).toBe(true);
+    expect(torontoWeekOne.breakfastMeals.every((meal) => meal.originCountry === "Canada")).toBe(true);
+    expect(visibleTorontoMeals).not.toMatch(/moi moi|amala|ewa?du|pounded yam|eba|pap\b|ofada|plantain porridge/);
+    expect(torontoWeekOne.meals.map((meal) => meal.sourceTitle).filter((title) => torontoWeekTwo.meals.some((meal) => meal.sourceTitle === title))).toEqual([]);
   });
 
   it("uses genuinely distinct first- and second-week recipe sets for country and city packs", () => {

@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { FoodCountry } from "@/lib/food-catalogue";
-import { locationRecipeWeeks } from "./location-recipes";
+import { seasonalFoodCues, type FoodCountry } from "./food-catalogue";
+import { locationBreakfastRecipes, locationRecipeWeeks } from "./location-recipes";
 
 export type ShoppingFrequency = "daily" | "weekly" | "biweekly" | "monthly";
 export type MealFrequency = "one_plus_snack" | "two" | "three";
@@ -17,6 +17,7 @@ export type CityRecipeRating = { recipeTitle: string; score: 1 | 2 | 3 | 4 | 5; 
 export type UserProfile = {
   city: string;
   country: FoodCountry;
+  foodHeritagePreferences: FoodCountry[];
   electricityHoursPerDay: number;
   marketMinutesAway: number;
   shoppingFrequency: ShoppingFrequency | null;
@@ -55,6 +56,7 @@ export type MealDay = {
   day: number;
   label: string;
   sourceTitle?: string;
+  originCountry?: FoodCountry;
   title: string;
   focus: string;
   ingredients: string[];
@@ -90,6 +92,7 @@ export type ShoppingGroup = {
 
 export type WeeklyPlan = {
   rotationLabel: string;
+  locationNote: string;
   goalTitle: string;
   goalMessage: string;
   safetyNote: string;
@@ -171,6 +174,7 @@ export const resourceChangeFeedbackStorageKey = "rootedfit.resource-change-feedb
 export const emptyProfile: UserProfile = {
   city: "",
   country: "Nigeria",
+  foodHeritagePreferences: [],
   electricityHoursPerDay: 0,
   marketMinutesAway: 0,
   shoppingFrequency: null,
@@ -210,6 +214,7 @@ function normaliseProfile(profile: Partial<UserProfile>): UserProfile {
   return {
     ...emptyProfile,
     ...profile,
+    foodHeritagePreferences: Array.isArray(profile.foodHeritagePreferences) ? profile.foodHeritagePreferences.filter((country): country is FoodCountry => typeof country === "string") : [],
     kitchenEquipment: profile.kitchenEquipment ?? [],
     otherKitchenEquipment: profile.otherKitchenEquipment ?? [],
     favoriteMeals: profile.favoriteMeals ?? [],
@@ -805,7 +810,8 @@ function preferRatedRecipes<T extends { title: string }>(recipes: T[], ratings: 
 }
 
 export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
-  const localIngredients = profile.localIngredients.length ? profile.localIngredients : ["tomato", "onion", "leafy greens"];
+  const localSeasonalCues = seasonalFoodCues(profile.country, profile.city);
+  const localIngredients = profile.localIngredients.length ? profile.localIngredients : localSeasonalCues.length ? localSeasonalCues : ["tomato", "onion", "leafy greens"];
   const storageNote = foodStorageNote(profile);
   const goal = goalCopy(profile.goal);
   const durationMinutes = Math.max(10, Math.min(60, profile.workoutMinutesPerDay || 20));
@@ -865,10 +871,11 @@ export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
   const usableRecipes = usesAnimalFoods ? availableRecipes : plantBasedRecipes.length ? plantBasedRecipes : availableRecipes;
   const makeMeal = (recipe: Omit<MealDay, "day" | "label" | "storageNote" | "equipmentNote" | "sourceTitle">, day: number, label: string) => { const focus = focusMealDetails(profile.goal, applyServingPreference(recipe.ingredients, profile.servingSize)); return { ...recipe, sourceTitle: recipe.title, title: `${focus.titlePrefix}${recipe.title}`, ingredients: focus.ingredients, focus: `${recipe.focus}. ${focus.note}`, day, label, storageNote, equipmentNote: recipeEquipmentNote }; };
   const mealPlan = labels.map((label, index) => makeMeal(usableRecipes.length ? usableRecipes[index % usableRecipes.length] : ratedRotationRecipes[0], index + 1, label));
-  const breakfastCandidates = breakfastRecipes.filter((recipe) => !excluded.some((item) => `${recipe.title} ${recipe.ingredients.join(" ")}`.toLowerCase().includes(item)) && !profile.excludedRecipeTitles.includes(recipe.title));
+  const localizedBreakfastRecipes = locationBreakfastRecipes(profile.country, profile.city, fruit);
+  const breakfastCandidates = localizedBreakfastRecipes.filter((recipe) => !excluded.some((item) => `${recipe.title} ${recipe.ingredients.join(" ")}`.toLowerCase().includes(item)) && !profile.excludedRecipeTitles.includes(recipe.title));
   const breakfastPlantBased = breakfastCandidates.filter((recipe) => !/(egg|yoghurt|milk)/i.test(`${recipe.title} ${recipe.ingredients.join(" ")}`));
   const usableBreakfasts = usesAnimalFoods ? breakfastCandidates : breakfastPlantBased.length ? breakfastPlantBased : breakfastCandidates;
-  const breakfastMeals = labels.map((label, index) => makeMeal(usableBreakfasts.length ? usableBreakfasts[index % usableBreakfasts.length] : breakfastRecipes[5], index + 1, label));
+  const breakfastMeals = labels.map((label, index) => makeMeal(usableBreakfasts.length ? usableBreakfasts[index % usableBreakfasts.length] : localizedBreakfastRecipes[0], index + 1, label));
   const sweetToothSnack = profile.sweetToothPreference === "healthier_swaps" ? "Fruit with plain yoghurt or a small homemade cocoa-oat snack" : profile.sweetToothPreference === "portion_guidance" ? "A small chosen sweet portion served after a balanced meal, rather than eating from the packet" : "A small cup of pap, yoghurt, or another snack that fits your dietary notes";
   const snackIdeas = [`${fruit} with a small handful of groundnuts if suitable for you`, "Cucumber, carrot, or another crunchy vegetable with a familiar dip", sweetToothSnack];
   const slotLabels = profile.mealFrequency === "one_plus_snack" ? ["Main meal"] : profile.mealFrequency === "two" ? ["Breakfast", "Dinner"] : ["Breakfast", "Lunch", "Dinner"];
@@ -926,6 +933,7 @@ export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
   ]).slice(0, 60));
   return {
     rotationLabel: `Week ${profile.rotationWeek} of your two-week rotation`,
+    locationNote: localSeasonalCues.length ? `Current local-market cue: ${localSeasonalCues.join(", ")}. Harvest timing and price can vary, so use what is genuinely available.` : "Your recipes start with local city and country cues, then follow the foods you say are actually available.",
     goalTitle: goal.title,
     goalMessage: goal.message,
     safetyNote: "RootedFit is a general wellness guide. If you are pregnant, managing a medical condition, returning after injury, or experience pain, adapt the plan and consider local professional guidance.",

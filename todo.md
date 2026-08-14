@@ -152,3 +152,8 @@
 - [x] Add regression coverage, validate, publish, and push the city ratings and trend-chart release
 - [x] Fix Week 1 and Week 2 so every selected location shows visibly distinct meal schedules
 - [x] Add regression coverage, validate, publish, and push the corrected two-week rotation release
+- [x] Research and define a strict city and country food-source model for every supported location
+- [x] Stop Nigerian and other regional recipes from appearing outside their matching city/country unless explicitly requested
+- [x] Add locality, seasonality, and optional diaspora-preference controls to onboarding and meal planning
+- [x] Build evidence-informed two-week city recipe packs with enough genuinely local variety
+- [ ] Add location-integrity regression tests, validate, publish, and push the rebuilt meal engine
