@@ -223,6 +223,11 @@ const BREAKFAST_RECIPES: Record<FoodCountry, RecipeSeed[]> = {
   Nigeria: [
     { title: "Moi moi with cucumber and tomato", focus: "A familiar Nigerian bean breakfast with a light vegetable side", ingredients: ["1 small moi moi portion", "½ cucumber", "1 tomato", "1 boiled egg if suitable"] },
     { title: "Pap with egg and groundnuts", focus: "A warm, easy Nigerian breakfast with a defined protein addition", ingredients: ["¾ cup pap", "1 egg", "1 tablespoon groundnuts", "1 portion fruit"] },
+    { title: "Boiled yam with egg and tomato sauce", focus: "A familiar light yam breakfast with vegetables and a clear protein side", ingredients: ["2 small yam slices", "2 eggs", "1 tomato", "¼ onion", "1 teaspoon oil"] },
+    { title: "Oats with banana, groundnuts, and milk", focus: "A quick oat breakfast using fruit and a filling pantry addition", ingredients: ["½ cup oats", "1 banana", "1 tablespoon groundnuts", "milk or fortified soy milk"] },
+    { title: "Beans and cucumber breakfast bowl", focus: "A simple beans-based breakfast with fresh crunch", ingredients: ["½ cup cooked beans", "½ cucumber", "1 tomato", "small bread or yam portion"] },
+    { title: "Yoghurt oats cup with mango and seeds", focus: "A no-cook option for a day with safe cold storage", ingredients: ["¾ cup plain yoghurt or soy yoghurt", "¼ cup oats", "mango or another fruit", "1 tablespoon seeds or groundnuts"] },
+    { title: "Sweet potato and sardine tomato bowl", focus: "A durable root-and-fish breakfast with tomato and greens", ingredients: ["1 small sweet potato", "1 sardine portion", "1 tomato", "¼ onion", "greens if available"] },
   ],
   Ghana: [
     { title: "Millet porridge with egg and fruit", focus: "A light Ghanaian-style breakfast with a clear protein side", ingredients: ["½ cup millet porridge", "1 egg", "1 portion fruit", "groundnuts"] },
@@ -264,8 +269,8 @@ const NIGERIA_WEEK_TWO_BREAKFAST_RECIPES: RecipeSeed[] = [
   { title: "Boiled sweet potato with sardine tomato topping", focus: "A light root-and-fish breakfast using durable household ingredients", ingredients: ["1 small sweet potato", "1 sardine portion", "1 tomato", "¼ onion", "greens if available"] },
   { title: "Egg and vegetable bread pocket", focus: "A quick protein breakfast with tomato, greens, and a small bread portion", ingredients: ["2 eggs", "1 tomato", "¼ onion", "½ cup greens", "1 small bread roll or 1 slice bread"] },
   { title: "Oats, banana, groundnuts, and boiled egg", focus: "A warm oat breakfast with fruit, groundnuts, and a clear protein side", ingredients: ["½ cup oats", "1 banana", "1 tablespoon groundnuts", "1 boiled egg"] },
-  { title: "Beans and cucumber breakfast bowl", focus: "A simple beans-based morning meal with fresh crunch", ingredients: ["½ cup cooked beans", "½ cucumber", "1 tomato", "¼ onion", "small bread or yam portion"] },
-  { title: "Yoghurt oats cup with mango and seeds", focus: "A no-cook option for a day with safe cold storage", ingredients: ["¾ cup plain yoghurt or soy yoghurt", "¼ cup oats", "mango or another fruit", "1 tablespoon seeds or groundnuts"] },
+  { title: "Beans, tomato, and pepper breakfast bowl", focus: "A simple beans-based morning meal with a fresh tomato and pepper side", ingredients: ["½ cup cooked beans", "1 tomato", "¼ bell pepper", "¼ onion", "small bread or yam portion"] },
+  { title: "Soya yoghurt, pineapple, and oat cup", focus: "A no-cook option for a day with safe cold storage", ingredients: ["¾ cup plain soya yoghurt", "¼ cup oats", "pineapple or another fruit", "1 tablespoon seeds or groundnuts"] },
   { title: "Boiled yam with garden egg sauce and egg", focus: "A small familiar yam breakfast with vegetables and protein", ingredients: ["2 small yam slices", "1 egg", "2 garden eggs or 1 tomato", "¼ onion", "1 teaspoon oil"] },
 ];
 

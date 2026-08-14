@@ -170,3 +170,7 @@
 - [x] Make profile edits update Meals and Workouts immediately without a refresh
 - [x] Reduce avoidable plan-screen loading and interaction delay
 - [x] Add sync regressions, validate, publish, and push the responsive release
+- [x] Compare the latest local, GitHub, and public-production RootedFit revisions
+- [x] Audit every rendered Week 1 and Week 2 meal slot for unique recipes
+- [x] Further reduce plan text density and add purposeful visual illustration cues in Meals and Workouts
+- [ ] Add audit regressions, validate, publish, and push the verified release
