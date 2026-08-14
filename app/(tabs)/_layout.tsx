@@ -19,19 +19,22 @@ export default function TabLayout() {
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarStyle: {
-          paddingTop: 8,
+          paddingTop: 7,
           paddingBottom: bottomPadding,
-          height: tabBarHeight,
+          height: tabBarHeight + 2,
           backgroundColor: colors.background,
           borderTopColor: colors.border,
           borderTopWidth: 0.5,
         },
+        tabBarItemStyle: { paddingVertical: 1 },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: "700", letterSpacing: 0.1 },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: "Plan",
+          tabBarAccessibilityLabel: "Plan and onboarding",
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
         }}
       />
@@ -39,6 +42,7 @@ export default function TabLayout() {
         name="progress"
         options={{
           title: "Track",
+          tabBarAccessibilityLabel: "Progress overview",
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="chart.bar.fill" color={color} />,
         }}
       />
@@ -46,6 +50,7 @@ export default function TabLayout() {
         name="schedule"
         options={{
           title: "Meals",
+          tabBarAccessibilityLabel: "Meal plans and grocery list",
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="fork.knife" color={color} />,
         }}
       />
@@ -53,6 +58,7 @@ export default function TabLayout() {
         name="workouts"
         options={{
           title: "Workouts",
+          tabBarAccessibilityLabel: "Workout sessions",
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="dumbbell.fill" color={color} />,
         }}
       />
@@ -60,9 +66,11 @@ export default function TabLayout() {
         name="move"
         options={{
           title: "Extras",
+          tabBarAccessibilityLabel: "Extras and wellness tools",
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="figure.run" color={color} />,
         }}
       />
+      <Tabs.Screen name="tracker" options={{ href: null }} />
     </Tabs>
   );
 }

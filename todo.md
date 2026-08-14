@@ -182,3 +182,7 @@
 - [x] Add tap-to-expand recipe image viewing in the Meals experience
 - [x] Add local saved-photo favorites for recipe visuals
 - [ ] Add coverage regressions, validate, publish, and push the complete recipe-photo release
+- [x] Confirm the deployed beta URL and GitHub main branch match the current RootedFit release
+- [x] Audit and refine Plan, Meals, and Workouts visual hierarchy, spacing, and interaction clarity
+- [x] Add consistent polished UI feedback and accessibility improvements across web and Expo
+- [ ] Validate, publish, and push the UI/UX refinement release
