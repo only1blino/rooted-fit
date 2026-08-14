@@ -169,4 +169,4 @@
 - [x] Trace and remove stale profile state across Plan, Meals, and Workouts
 - [x] Make profile edits update Meals and Workouts immediately without a refresh
 - [x] Reduce avoidable plan-screen loading and interaction delay
-- [ ] Add sync regressions, validate, publish, and push the responsive release
+- [x] Add sync regressions, validate, publish, and push the responsive release
