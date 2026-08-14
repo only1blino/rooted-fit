@@ -6,7 +6,7 @@ import * as Sharing from "expo-sharing";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { CompletionRatingPrompt } from "@/components/completion-rating-prompt";
-import { buildWeeklyPlan, findSimilarRecipe, formatGroceryChecklistPrintHtml, formatGroceryListExport, loadGroceryChecklist, loadMealSwaps, loadProfile, saveGroceryChecklist, saveMealSwaps, saveProfile, upsertCityRecipeRating, type GroceryChecklistItem, type MealFrequency, type MealSwap, type ServingSize, type UserProfile } from "@/lib/rootedfit-profile";
+import { buildWeeklyPlan, findSimilarRecipe, formatGroceryChecklistPrintHtml, formatGroceryListExport, loadGroceryChecklist, loadMealSwaps, loadProfile, saveGroceryChecklist, saveMealSwaps, saveProfile, subscribeProfile, upsertCityRecipeRating, type GroceryChecklistItem, type MealFrequency, type MealSwap, type ServingSize, type UserProfile } from "@/lib/rootedfit-profile";
 import { locationSuggestionLabel } from "@/lib/food-catalogue";
 
 const FREQUENCIES: { value: MealFrequency; label: string; description: string }[] = [
@@ -34,6 +34,7 @@ export default function MealsScreen() {
     loadProfile().then(setProfile);
     loadMealSwaps().then(setSwaps);
     loadGroceryChecklist().then(setChecklist);
+    return subscribeProfile(setProfile);
   }, []);
 
   const plan = useMemo(() => (profile ? buildWeeklyPlan(profile) : null), [profile]);

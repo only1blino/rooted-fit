@@ -6,7 +6,7 @@ import * as Notifications from "expo-notifications";
 import { ScreenContainer } from "@/components/screen-container";
 import { CompletionRatingPrompt } from "@/components/completion-rating-prompt";
 import { useAuth } from "@/hooks/use-auth";
-import { applyTodayResourceSubstitutions, buildWeeklyPlan, buildWorkoutSessionPreview, buildWorkoutWhyToday, defaultPlannedSessionReminder, getTodayResourceSubstituteOptions, isReminderPauseActive, loadExerciseLogs, loadPlannedSessionReminder, loadProfile, loadTodayResourceSubstitutions, loadTodayUnavailableResources, loadWorkoutSessionStates, loadResourceChangeFeedback, oneWeekReminderPauseUntil, reminderMotivationText, reminderQuoteOptions, saveExerciseLogs, savePlannedSessionReminder, saveProfile, saveResourceChangeFeedback, saveTodayResourceSubstitutions, saveTodayUnavailableResources, saveWorkoutSessionStates, type LocalExerciseLog, type LocalResourceChangeFeedback, type PlannedSessionReminder, type ReminderQuoteId, type ReminderSchedule, type ReminderWeekday, type TodayResourceSubstitution, type UserProfile, type WorkoutDifficulty, type WorkoutSessionState } from "@/lib/rootedfit-profile";
+import { applyTodayResourceSubstitutions, buildWeeklyPlan, buildWorkoutSessionPreview, buildWorkoutWhyToday, defaultPlannedSessionReminder, getTodayResourceSubstituteOptions, isReminderPauseActive, loadExerciseLogs, loadPlannedSessionReminder, loadProfile, loadTodayResourceSubstitutions, loadTodayUnavailableResources, loadWorkoutSessionStates, loadResourceChangeFeedback, oneWeekReminderPauseUntil, reminderMotivationText, reminderQuoteOptions, saveExerciseLogs, savePlannedSessionReminder, saveProfile, saveResourceChangeFeedback, saveTodayResourceSubstitutions, saveTodayUnavailableResources, saveWorkoutSessionStates, subscribeProfile, type LocalExerciseLog, type LocalResourceChangeFeedback, type PlannedSessionReminder, type ReminderQuoteId, type ReminderSchedule, type ReminderWeekday, type TodayResourceSubstitution, type UserProfile, type WorkoutDifficulty, type WorkoutSessionState } from "@/lib/rootedfit-profile";
 import { trpc } from "@/lib/trpc";
 
 const DIFFICULTIES: { value: WorkoutDifficulty; label: string; description: string }[] = [
@@ -53,6 +53,7 @@ export default function WorkoutsScreen() {
     loadTodayResourceSubstitutions().then(setTodaySubstitutions);
     loadResourceChangeFeedback().then(setResourceFeedbackHistory);
     loadPlannedSessionReminder().then(setSessionReminder);
+    return subscribeProfile(setProfile);
   }, []);
 
   const effectiveProfile = useMemo(() => profile ? applyTodayResourceSubstitutions(profile, todayUnavailableResources, todaySubstitutions) : null, [profile, todaySubstitutions, todayUnavailableResources]);

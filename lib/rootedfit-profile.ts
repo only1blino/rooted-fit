@@ -508,6 +508,18 @@ export function formatToday() {
   return new Date().toISOString().slice(0, 10);
 }
 
+const profileListeners = new Set<(profile: UserProfile | null) => void>();
+
+/** Keeps mounted local-first screens in sync after a profile edit without polling or a browser refresh. */
+export function subscribeProfile(listener: (profile: UserProfile | null) => void) {
+  profileListeners.add(listener);
+  return () => { profileListeners.delete(listener); };
+}
+
+function notifyProfileListeners(profile: UserProfile | null) {
+  profileListeners.forEach((listener) => listener(profile));
+}
+
 export async function loadProfile(): Promise<UserProfile | null> {
   const current = await AsyncStorage.getItem(profileStorageKey);
   const legacy = current ? null : await AsyncStorage.getItem(legacyProfileStorageKey);
@@ -524,11 +536,13 @@ export async function loadProfile(): Promise<UserProfile | null> {
 }
 
 export async function saveProfile(profile: UserProfile) {
+  notifyProfileListeners(profile);
   await AsyncStorage.setItem(profileStorageKey, JSON.stringify(profile));
 }
 
 export async function clearProfile() {
   await AsyncStorage.multiRemove([profileStorageKey, legacyProfileStorageKey, checkInsStorageKey, measurementsStorageKey, progressPhotosStorageKey, mealSwapsStorageKey, workoutSessionsStorageKey, plannedSessionReminderStorageKey, waterLogsStorageKey, groceryChecklistStorageKey, exerciseLogsStorageKey, completionRatingsStorageKey, todayUnavailableResourcesStorageKey, todayResourceSubstitutionsStorageKey, resourceChangeFeedbackStorageKey]);
+  notifyProfileListeners(null);
 }
 
 export async function loadCheckIns(): Promise<DailyCheckIn[]> {

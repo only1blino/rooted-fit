@@ -14,7 +14,7 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
-import { applyTodayResourceSubstitutions, applyTodayUnavailableResources, buildGymResultSummary, buildMonthlyTrendSeries, buildMonthProgressSummary, buildWeeklyPlan, buildWorkoutSessionPreview, buildWorkoutWhyToday, categorizeGroceryItems, findSimilarRecipe, formatGroceryChecklistPrintHtml, formatGroceryListExport, getTodayResourceSubstituteOptions, isReminderPauseActive, loadCheckIns, loadCompletionRatings, loadExerciseLogs, loadGroceryChecklist, loadMealSwaps, loadMeasurements, loadPlannedSessionReminder, loadProfile, loadProgressPhotos, loadResourceChangeFeedback, loadTodayResourceSubstitutions, loadTodayUnavailableResources, loadWorkoutSessionStates, normaliseReminderTime, normaliseReminderWeekdays, numberOrNull, oneWeekReminderPauseUntil, practicalGroceryItems, reminderMotivationText, rotatingIndexForDate, saveCheckIns, saveCompletionRatings, saveExerciseLogs, saveGroceryChecklist, saveMealSwaps, saveMeasurements, savePlannedSessionReminder, saveProfile, saveProgressPhotos, saveResourceChangeFeedback, saveTodayResourceSubstitutions, saveTodayUnavailableResources, saveWorkoutSessionStates, splitList, upsertCityRecipeRating, type UserProfile } from "../lib/rootedfit-profile";
+import { applyTodayResourceSubstitutions, applyTodayUnavailableResources, buildGymResultSummary, buildMonthlyTrendSeries, buildMonthProgressSummary, buildWeeklyPlan, buildWorkoutSessionPreview, buildWorkoutWhyToday, categorizeGroceryItems, findSimilarRecipe, formatGroceryChecklistPrintHtml, formatGroceryListExport, getTodayResourceSubstituteOptions, isReminderPauseActive, loadCheckIns, loadCompletionRatings, loadExerciseLogs, loadGroceryChecklist, loadMealSwaps, loadMeasurements, loadPlannedSessionReminder, loadProfile, loadProgressPhotos, loadResourceChangeFeedback, loadTodayResourceSubstitutions, loadTodayUnavailableResources, loadWorkoutSessionStates, normaliseReminderTime, normaliseReminderWeekdays, numberOrNull, oneWeekReminderPauseUntil, practicalGroceryItems, reminderMotivationText, rotatingIndexForDate, saveCheckIns, saveCompletionRatings, saveExerciseLogs, saveGroceryChecklist, saveMealSwaps, saveMeasurements, savePlannedSessionReminder, saveProfile, saveProgressPhotos, saveResourceChangeFeedback, saveTodayResourceSubstitutions, saveTodayUnavailableResources, saveWorkoutSessionStates, splitList, subscribeProfile, upsertCityRecipeRating, type UserProfile } from "../lib/rootedfit-profile";
 import { locationSuggestionLabel, resolveFoodLocation, seasonalFoodCues, suggestedFoods, suggestedFruits, suggestedMeals } from "../lib/food-catalogue";
 
 const microwaveProfile: UserProfile = {
@@ -58,6 +58,18 @@ const microwaveProfile: UserProfile = {
 
 describe("RootedFit weekly plan builder", () => {
   beforeEach(() => storage.clear());
+
+  it("notifies mounted Meals and Workouts subscribers before local profile persistence completes", async () => {
+    const received: string[] = [];
+    const unsubscribe = subscribeProfile((profile) => { if (profile) received.push(`${profile.city}:${profile.workoutDifficulty}`); });
+
+    const persistence = saveProfile({ ...microwaveProfile, city: "Toronto", country: "Canada", workoutDifficulty: "advanced" });
+    expect(received).toEqual(["Toronto:advanced"]);
+    await persistence;
+    unsubscribe();
+
+    expect(received).toEqual(["Toronto:advanced"]);
+  });
 
   it("keeps favourite foods while adapting seven meal ideas to 12-hour power and a microwave", () => {
     const plan = buildWeeklyPlan(microwaveProfile);

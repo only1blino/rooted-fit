@@ -166,3 +166,7 @@
 - [x] Reduce wordiness and add clear illustrated visual cues to the meals experience
 - [x] Add rendered-rotation regressions, validate web and Expo, publish, and push the corrective release
 - [x] Force publication and verify the public tester URL serves the corrected rotation bundle
+- [x] Trace and remove stale profile state across Plan, Meals, and Workouts
+- [x] Make profile edits update Meals and Workouts immediately without a refresh
+- [x] Reduce avoidable plan-screen loading and interaction delay
+- [ ] Add sync regressions, validate, publish, and push the responsive release
