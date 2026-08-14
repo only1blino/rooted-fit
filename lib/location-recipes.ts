@@ -259,8 +259,19 @@ const BREAKFAST_RECIPES: Record<FoodCountry, RecipeSeed[]> = {
   ],
 };
 
+const NIGERIA_WEEK_TWO_BREAKFAST_RECIPES: RecipeSeed[] = [
+  { title: "Akara with tomato, cucumber, and fruit", focus: "A fresh Nigerian bean breakfast with a light vegetable and fruit side", ingredients: ["3 small akara", "1 tomato", "½ cucumber", "1 portion fruit"] },
+  { title: "Boiled sweet potato with sardine tomato topping", focus: "A light root-and-fish breakfast using durable household ingredients", ingredients: ["1 small sweet potato", "1 sardine portion", "1 tomato", "¼ onion", "greens if available"] },
+  { title: "Egg and vegetable bread pocket", focus: "A quick protein breakfast with tomato, greens, and a small bread portion", ingredients: ["2 eggs", "1 tomato", "¼ onion", "½ cup greens", "1 small bread roll or 1 slice bread"] },
+  { title: "Oats, banana, groundnuts, and boiled egg", focus: "A warm oat breakfast with fruit, groundnuts, and a clear protein side", ingredients: ["½ cup oats", "1 banana", "1 tablespoon groundnuts", "1 boiled egg"] },
+  { title: "Beans and cucumber breakfast bowl", focus: "A simple beans-based morning meal with fresh crunch", ingredients: ["½ cup cooked beans", "½ cucumber", "1 tomato", "¼ onion", "small bread or yam portion"] },
+  { title: "Yoghurt oats cup with mango and seeds", focus: "A no-cook option for a day with safe cold storage", ingredients: ["¾ cup plain yoghurt or soy yoghurt", "¼ cup oats", "mango or another fruit", "1 tablespoon seeds or groundnuts"] },
+  { title: "Boiled yam with garden egg sauce and egg", focus: "A small familiar yam breakfast with vegetables and protein", ingredients: ["2 small yam slices", "1 egg", "2 garden eggs or 1 tomato", "¼ onion", "1 teaspoon oil"] },
+];
+
 /** Breakfast uses the same resolved country boundary as lunch and dinner; it cannot silently fall back to a Nigerian template. */
-export function locationBreakfastRecipes(country: FoodCountry, city: string, fruit: string, matchChoice: CityCountryMatchChoice = "auto"): LocationRecipe[] {
+export function locationBreakfastRecipes(country: FoodCountry, city: string, fruit: string, matchChoice: CityCountryMatchChoice = "auto", rotationWeek: 1 | 2 = 1): LocationRecipe[] {
   const resolved = resolveFoodLocation(country, city, matchChoice);
-  return BREAKFAST_RECIPES[resolved.country].map((recipe) => toRecipe(recipe, fruit, resolved.country));
+  const recipes = resolved.country === "Nigeria" && rotationWeek === 2 ? NIGERIA_WEEK_TWO_BREAKFAST_RECIPES : BREAKFAST_RECIPES[resolved.country];
+  return recipes.map((recipe) => toRecipe(recipe, fruit, resolved.country));
 }

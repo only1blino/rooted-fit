@@ -147,6 +147,18 @@ describe("RootedFit weekly plan builder", () => {
     expect(generous.shoppingGroups.flatMap((group) => group.items).join(" ")).toMatch(/Banga spice|Waterleaf|Ewedu/);
   });
 
+  it("changes every rendered Lagos meal slot, including breakfast, between Week 1 and Week 2", () => {
+    const weekOne = buildWeeklyPlan({ ...microwaveProfile, city: "Lagos", country: "Nigeria", rotationWeek: 1 });
+    const weekTwo = buildWeeklyPlan({ ...microwaveProfile, city: "Lagos", country: "Nigeria", rotationWeek: 2 });
+    const weekOneSlots = weekOne.dailyMeals.flatMap((day) => day.slots.map((slot) => slot.meal.sourceTitle));
+    const weekTwoSlots = weekTwo.dailyMeals.flatMap((day) => day.slots.map((slot) => slot.meal.sourceTitle));
+
+    expect(weekOne.dailyMeals[0].slots[0].meal.sourceTitle).toContain("Moi moi");
+    expect(weekTwo.dailyMeals[0].slots[0].meal.sourceTitle).toContain("Akara");
+    expect(weekOneSlots).not.toEqual(weekTwoSlots);
+    expect(weekOneSlots.filter((title) => weekTwoSlots.includes(title))).toEqual([]);
+  });
+
   it("provides seven distinct day-by-day home workouts instead of a repeated two-session library", () => {
     const plan = buildWeeklyPlan(microwaveProfile);
 

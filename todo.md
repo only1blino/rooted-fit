@@ -161,3 +161,7 @@
 - [x] Add dedicated reviewed two-week recipe packs for priority tester cities
 - [x] Add a clear city-country match confirmation and correction control to onboarding
 - [x] Add regression coverage, validate, publish, and push the expanded location-control release
+- [x] Verify the live tester deployment and reproduce the actual Week 1 and Week 2 meal output
+- [x] Fix the displayed Week 1 and Week 2 rotation so every daily recipe slot visibly changes
+- [x] Reduce wordiness and add clear illustrated visual cues to the meals experience
+- [ ] Add rendered-rotation regressions, validate web and Expo, publish, and push the corrective release

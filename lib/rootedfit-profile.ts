@@ -874,7 +874,7 @@ export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
   const usableRecipes = usesAnimalFoods ? availableRecipes : plantBasedRecipes.length ? plantBasedRecipes : availableRecipes;
   const makeMeal = (recipe: Omit<MealDay, "day" | "label" | "storageNote" | "equipmentNote" | "sourceTitle">, day: number, label: string) => { const focus = focusMealDetails(profile.goal, applyServingPreference(recipe.ingredients, profile.servingSize)); return { ...recipe, sourceTitle: recipe.title, title: `${focus.titlePrefix}${recipe.title}`, ingredients: focus.ingredients, focus: `${recipe.focus}. ${focus.note}`, day, label, storageNote, equipmentNote: recipeEquipmentNote }; };
   const mealPlan = labels.map((label, index) => makeMeal(usableRecipes.length ? usableRecipes[index % usableRecipes.length] : ratedRotationRecipes[0], index + 1, label));
-  const localizedBreakfastRecipes = locationBreakfastRecipes(profile.country, profile.city, fruit, profile.cityCountryMatchChoice);
+  const localizedBreakfastRecipes = locationBreakfastRecipes(profile.country, profile.city, fruit, profile.cityCountryMatchChoice, profile.rotationWeek);
   const breakfastCandidates = localizedBreakfastRecipes.filter((recipe) => !excluded.some((item) => `${recipe.title} ${recipe.ingredients.join(" ")}`.toLowerCase().includes(item)) && !profile.excludedRecipeTitles.includes(recipe.title));
   const breakfastPlantBased = breakfastCandidates.filter((recipe) => !/(egg|yoghurt|milk)/i.test(`${recipe.title} ${recipe.ingredients.join(" ")}`));
   const usableBreakfasts = usesAnimalFoods ? breakfastCandidates : breakfastPlantBased.length ? breakfastPlantBased : breakfastCandidates;
