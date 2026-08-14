@@ -174,3 +174,7 @@
 - [x] Audit every rendered Week 1 and Week 2 meal slot for unique recipes
 - [x] Further reduce plan text density and add purposeful visual illustration cues in Meals and Workouts
 - [x] Add audit regressions, validate, publish, and push the verified release
+- [x] Define city-aware thumbnail mapping for RootedFit recipe cards
+- [x] Create lightweight city-specific recipe thumbnail visual assets
+- [x] Add responsive thumbnails to concise Meals cards across web and Expo
+- [ ] Test, validate, publish, and push the city-thumbnail release

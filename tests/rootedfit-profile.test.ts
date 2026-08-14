@@ -16,6 +16,7 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
 
 import { applyTodayResourceSubstitutions, applyTodayUnavailableResources, buildGymResultSummary, buildMonthlyTrendSeries, buildMonthProgressSummary, buildWeeklyPlan, buildWorkoutSessionPreview, buildWorkoutWhyToday, categorizeGroceryItems, findSimilarRecipe, formatGroceryChecklistPrintHtml, formatGroceryListExport, getTodayResourceSubstituteOptions, isReminderPauseActive, loadCheckIns, loadCompletionRatings, loadExerciseLogs, loadGroceryChecklist, loadMealSwaps, loadMeasurements, loadPlannedSessionReminder, loadProfile, loadProgressPhotos, loadResourceChangeFeedback, loadTodayResourceSubstitutions, loadTodayUnavailableResources, loadWorkoutSessionStates, normaliseReminderTime, normaliseReminderWeekdays, numberOrNull, oneWeekReminderPauseUntil, practicalGroceryItems, reminderMotivationText, rotatingIndexForDate, saveCheckIns, saveCompletionRatings, saveExerciseLogs, saveGroceryChecklist, saveMealSwaps, saveMeasurements, savePlannedSessionReminder, saveProfile, saveProgressPhotos, saveResourceChangeFeedback, saveTodayResourceSubstitutions, saveTodayUnavailableResources, saveWorkoutSessionStates, splitList, subscribeProfile, upsertCityRecipeRating, type UserProfile } from "../lib/rootedfit-profile";
 import { locationSuggestionLabel, resolveFoodLocation, seasonalFoodCues, suggestedFoods, suggestedFruits, suggestedMeals } from "../lib/food-catalogue";
+import { recipeThumbnailFor } from "../lib/recipe-thumbnails";
 
 const microwaveProfile: UserProfile = {
   city: "Lagos",
@@ -419,6 +420,15 @@ describe("RootedFit weekly plan builder", () => {
     expect(torontoWeekOne.breakfastMeals.every((meal) => meal.originCountry === "Canada")).toBe(true);
     expect(visibleTorontoMeals).not.toMatch(/moi moi|amala|ewa?du|pounded yam|eba|pap\b|ofada|plantain porridge/);
     expect(torontoWeekOne.meals.map((meal) => meal.sourceTitle).filter((title) => torontoWeekTwo.meals.some((meal) => meal.sourceTitle === title))).toEqual([]);
+  });
+
+  it("selects a recipe thumbnail from the resolved city rather than a retained country default", () => {
+    expect(recipeThumbnailFor("Nigeria", "Toronto")).toContain("toronto-recipes");
+    expect(recipeThumbnailFor("Nigeria", "Lagos")).toContain("lagos-recipes");
+    expect(recipeThumbnailFor("Ghana", "Accra")).toContain("accra-recipes");
+    expect(recipeThumbnailFor("Kenya", "Nairobi")).toContain("nairobi-recipes");
+    expect(recipeThumbnailFor("Canada", "Vancouver")).toContain("vancouver-recipes");
+    expect(recipeThumbnailFor("Other", "Manila")).toContain("manila-recipes");
   });
 
   it("uses dedicated audited Vancouver and Montréal two-week city packs with their own seasonal cues", () => {
