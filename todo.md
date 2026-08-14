@@ -157,3 +157,7 @@
 - [x] Add locality, seasonality, and optional diaspora-preference controls to onboarding and meal planning
 - [x] Build evidence-informed two-week city recipe packs with enough genuinely local variety
 - [x] Add location-integrity regression tests, validate, publish, and push the rebuilt meal engine
+- [x] Audit current city coverage and research additional tester-city meal packs
+- [x] Add dedicated reviewed two-week recipe packs for priority tester cities
+- [x] Add a clear city-country match confirmation and correction control to onboarding
+- [ ] Add regression coverage, validate, publish, and push the expanded location-control release

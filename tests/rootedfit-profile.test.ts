@@ -15,11 +15,12 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
 }));
 
 import { applyTodayResourceSubstitutions, applyTodayUnavailableResources, buildGymResultSummary, buildMonthlyTrendSeries, buildMonthProgressSummary, buildWeeklyPlan, buildWorkoutSessionPreview, buildWorkoutWhyToday, categorizeGroceryItems, findSimilarRecipe, formatGroceryChecklistPrintHtml, formatGroceryListExport, getTodayResourceSubstituteOptions, isReminderPauseActive, loadCheckIns, loadCompletionRatings, loadExerciseLogs, loadGroceryChecklist, loadMealSwaps, loadMeasurements, loadPlannedSessionReminder, loadProfile, loadProgressPhotos, loadResourceChangeFeedback, loadTodayResourceSubstitutions, loadTodayUnavailableResources, loadWorkoutSessionStates, normaliseReminderTime, normaliseReminderWeekdays, numberOrNull, oneWeekReminderPauseUntil, practicalGroceryItems, reminderMotivationText, rotatingIndexForDate, saveCheckIns, saveCompletionRatings, saveExerciseLogs, saveGroceryChecklist, saveMealSwaps, saveMeasurements, savePlannedSessionReminder, saveProfile, saveProgressPhotos, saveResourceChangeFeedback, saveTodayResourceSubstitutions, saveTodayUnavailableResources, saveWorkoutSessionStates, splitList, upsertCityRecipeRating, type UserProfile } from "../lib/rootedfit-profile";
-import { locationSuggestionLabel, seasonalFoodCues, suggestedFoods, suggestedFruits, suggestedMeals } from "../lib/food-catalogue";
+import { locationSuggestionLabel, resolveFoodLocation, seasonalFoodCues, suggestedFoods, suggestedFruits, suggestedMeals } from "../lib/food-catalogue";
 
 const microwaveProfile: UserProfile = {
   city: "Lagos",
   country: "Nigeria",
+  cityCountryMatchChoice: "auto",
   foodHeritagePreferences: [],
   electricityHoursPerDay: 12,
   marketMinutesAway: 20,
@@ -378,6 +379,31 @@ describe("RootedFit weekly plan builder", () => {
     expect(torontoWeekOne.breakfastMeals.every((meal) => meal.originCountry === "Canada")).toBe(true);
     expect(visibleTorontoMeals).not.toMatch(/moi moi|amala|ewa?du|pounded yam|eba|pap\b|ofada|plantain porridge/);
     expect(torontoWeekOne.meals.map((meal) => meal.sourceTitle).filter((title) => torontoWeekTwo.meals.some((meal) => meal.sourceTitle === title))).toEqual([]);
+  });
+
+  it("uses dedicated audited Vancouver and Montréal two-week city packs with their own seasonal cues", () => {
+    const vancouverWeekOne = buildWeeklyPlan({ ...microwaveProfile, country: "Canada", city: "Vancouver", rotationWeek: 1 });
+    const vancouverWeekTwo = buildWeeklyPlan({ ...microwaveProfile, country: "Canada", city: "Vancouver", rotationWeek: 2 });
+    const montrealWeekOne = buildWeeklyPlan({ ...microwaveProfile, country: "Canada", city: "Montréal", rotationWeek: 1 });
+    const montrealWeekTwo = buildWeeklyPlan({ ...microwaveProfile, country: "Canada", city: "Montréal", rotationWeek: 2 });
+
+    expect(vancouverWeekOne.meals[0].sourceTitle).toContain("Pacific salmon");
+    expect(montrealWeekOne.meals[0].sourceTitle).toContain("Québec lentil");
+    expect(vancouverWeekOne.meals.map((meal) => meal.sourceTitle).filter((title) => vancouverWeekTwo.meals.some((meal) => meal.sourceTitle === title))).toEqual([]);
+    expect(montrealWeekOne.meals.map((meal) => meal.sourceTitle).filter((title) => montrealWeekTwo.meals.some((meal) => meal.sourceTitle === title))).toEqual([]);
+    expect(seasonalFoodCues("Canada", "Vancouver", new Date("2026-08-14T12:00:00.000Z"))).toContain("B.C. berries");
+    expect(seasonalFoodCues("Canada", "Montréal", new Date("2026-08-14T12:00:00.000Z"))).toContain("Québec carrots");
+  });
+
+  it("honours a user’s manual city-country correction instead of silently applying the automatic Toronto match", () => {
+    const automaticToronto = resolveFoodLocation("Nigeria", "Toronto", "auto");
+    const correctedToronto = resolveFoodLocation("Nigeria", "Toronto", "manual");
+    const manuallyCorrectedPlan = buildWeeklyPlan({ ...microwaveProfile, city: "Toronto", country: "Nigeria", cityCountryMatchChoice: "manual" });
+
+    expect(automaticToronto).toMatchObject({ country: "Canada", isCityMatch: true, matchChoice: "auto" });
+    expect(correctedToronto).toMatchObject({ country: "Nigeria", pack: null, matchChoice: "manual" });
+    expect(manuallyCorrectedPlan.meals[0].sourceTitle).toContain("Nigerian jollof rice");
+    expect(manuallyCorrectedPlan.meals[0].originCountry).not.toBe("Canada");
   });
 
   it("uses genuinely distinct first- and second-week recipe sets for country and city packs", () => {

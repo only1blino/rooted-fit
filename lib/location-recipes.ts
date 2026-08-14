@@ -1,4 +1,4 @@
-import { resolveFoodLocation, type FoodCountry } from "./food-catalogue";
+import { resolveFoodLocation, type CityCountryMatchChoice, type FoodCountry } from "./food-catalogue";
 
 export type LocationRecipe = { title: string; focus: string; ingredients: string[]; steps: string[]; drink: string; originCountry?: FoodCountry };
 type RecipeSeed = { title: string; focus: string; ingredients: string[] };
@@ -106,17 +106,65 @@ const COUNTRY_RECIPES: Record<Exclude<FoodCountry, "Nigeria" | "Ghana" | "Kenya"
   },
 };
 
+const AUDITED_CITY_RECIPES: Record<"vancouver" | "montreal", { weekOne: RecipeSeed[]; weekTwo: RecipeSeed[] }> = {
+  vancouver: {
+    weekOne: [
+      { title: "Pacific salmon, brown rice, and bok choy bowl", focus: "A Vancouver-oriented fish, rice, and greens meal with tofu as a practical alternative", ingredients: ["1 salmon portion or ¾ cup tofu", "½ cup brown rice", "1 cup bok choy", "½ cup mushrooms", "ginger", "1 teaspoon oil"] },
+      { title: "Tofu, broccoli, and edamame stir-fry", focus: "A plant-forward meal using foods common in Metro Vancouver supermarkets and Asian grocers", ingredients: ["¾ cup firm tofu", "1 cup broccoli", "½ cup frozen edamame", "½ cup brown rice", "garlic or ginger", "1 teaspoon oil"] },
+      { title: "Red lentil, carrot, and cabbage soup", focus: "A durable vegetable and lentil pot for cooler Vancouver market days", ingredients: ["¾ cup red lentils", "1 carrot", "1 cup cabbage", "½ onion", "low-sodium stock or water", "wholegrain toast"] },
+      { title: "Ginger chicken and seasonal greens tray", focus: "A simple tray meal that can use B.C. greens, broccoli, or frozen vegetables", ingredients: ["1 chicken portion", "1 cup greens or broccoli", "1 potato or sweet potato", "ginger", "garlic", "1 teaspoon oil"] },
+      { title: "Mushroom and barley bowl with peas", focus: "A pantry-friendly grain bowl using mushrooms and frozen peas", ingredients: ["½ cup pearl barley", "1 cup mushrooms", "½ cup frozen peas", "½ onion", "stock or water", "herbs"] },
+      { title: "Black bean, corn, and avocado rice bowl", focus: "A low-prep bean bowl with flexible vegetables and a fresh topping", ingredients: ["¾ cup black beans", "½ cup brown rice", "½ cup corn", "½ avocado", "tomato", "lime or herbs"] },
+      { title: "Sardine, tomato, and kale wholewheat pasta", focus: "A quick shelf-stable fish meal with greens", ingredients: ["1 sardine portion", "½ cup wholewheat pasta", "tinned tomatoes", "1 cup kale or spinach", "½ onion", "herbs"] },
+    ],
+    weekTwo: [
+      { title: "Miso-style tofu, mushroom, and noodle bowl", focus: "A flexible Vancouver pantry meal built around tofu, mushrooms, and noodles", ingredients: ["¾ cup tofu", "½ cup wholewheat noodles", "1 cup mushrooms", "1 cup bok choy", "miso or low-sodium stock", "ginger"] },
+      { title: "Salmon, potato, and cabbage skillet", focus: "A practical fish-and-vegetable meal using durable produce", ingredients: ["1 salmon or tinned salmon portion", "1 potato", "1 cup cabbage", "1 carrot", "½ onion", "1 teaspoon oil"] },
+      { title: "Chickpea, tomato, and spinach curry with rice", focus: "A cupboard-led plant-based meal with a modest grain base", ingredients: ["¾ cup chickpeas", "½ cup brown rice", "tinned tomatoes", "1 cup spinach", "½ onion", "curry powder"] },
+      { title: "Chicken, snap bean, and brown rice bowl", focus: "A meal that can use fresh B.C. beans in season or frozen vegetables year-round", ingredients: ["1 chicken portion", "½ cup brown rice", "1 cup snap beans or frozen vegetables", "carrot", "garlic", "1 teaspoon oil"] },
+      { title: "White bean, tomato, and kale soup", focus: "A second-week soup using shelf-stable beans and leafy greens", ingredients: ["¾ cup white beans", "tinned tomatoes", "1 cup kale", "1 carrot", "½ onion", "wholegrain toast"] },
+      { title: "Peanut tofu cabbage noodle bowl", focus: "A plant-based noodle meal with cabbage and a small pantry sauce", ingredients: ["¾ cup tofu", "½ cup noodles", "1 cup cabbage", "1 carrot", "1 teaspoon peanut butter", "ginger"] },
+      { title: "Egg, mushroom, and greens potato hash", focus: "A protein-forward light meal using potatoes, mushrooms, and greens", ingredients: ["2 eggs", "1 potato", "1 cup mushrooms", "1 cup greens", "½ onion", "1 teaspoon oil"] },
+    ],
+  },
+  montreal: {
+    weekOne: [
+      { title: "Québec lentil, carrot, and cabbage soup", focus: "A Montréal pantry soup using lentils and durable local-market vegetables", ingredients: ["¾ cup red lentils", "1 carrot", "1 cup cabbage", "½ onion", "low-sodium stock or water", "wholegrain toast"] },
+      { title: "Mushroom, potato, and egg skillet", focus: "A practical Montréal meal built around potatoes, mushrooms, and eggs", ingredients: ["2 eggs", "1 potato", "1 cup mushrooms", "½ onion", "1 cup spinach or kale", "1 teaspoon oil"] },
+      { title: "Tinned trout or salmon, barley, and beet bowl", focus: "A fish-and-grain bowl using tinned fish and Québec-style root vegetables", ingredients: ["1 tinned trout or salmon portion", "½ cup pearl barley", "1 small beet or carrot", "1 cup greens", "lemon or herbs", "1 teaspoon oil"] },
+      { title: "Chickpea tomato stew with wholegrain couscous", focus: "A flexible bean and tomato meal for a regular grocery shop", ingredients: ["¾ cup chickpeas", "½ cup wholegrain couscous", "tinned tomatoes", "½ onion", "peppers", "herbs"] },
+      { title: "Chicken, squash, and green bean tray", focus: "A cold-season tray meal using squash or carrots and fresh or frozen beans", ingredients: ["1 chicken portion", "1 cup squash or carrots", "½ cup green beans", "1 potato", "1 teaspoon oil", "herbs"] },
+      { title: "White bean, kale, and tomato pasta", focus: "A pantry-friendly pasta meal with beans and greens", ingredients: ["¾ cup white beans", "½ cup wholewheat pasta", "tinned tomatoes", "1 cup kale", "½ onion", "garlic"] },
+      { title: "Tofu, broccoli, and brown rice bowl", focus: "A plant-based bowl using common Montréal supermarket ingredients", ingredients: ["¾ cup tofu", "½ cup brown rice", "1 cup broccoli", "1 carrot", "ginger or garlic", "1 teaspoon oil"] },
+    ],
+    weekTwo: [
+      { title: "Potato, leek, and white bean soup", focus: "A Montréal-style cool-weather soup using durable vegetables and beans", ingredients: ["1 potato", "¾ cup white beans", "1 leek or ½ onion", "1 carrot", "stock or water", "wholegrain toast"] },
+      { title: "Tuna, cucumber, and chickpea grain bowl", focus: "A low-cook second-week meal using tinned fish, chickpeas, and vegetables", ingredients: ["1 tinned tuna portion", "¾ cup chickpeas", "½ cup brown rice or couscous", "½ cucumber", "tomato", "lemon or herbs"] },
+      { title: "Red lentil tomato shepherd’s-style potato bake", focus: "A hearty lentil and potato dish suited to a reliable oven or stovetop", ingredients: ["¾ cup red lentils", "1 potato", "1 carrot", "tinned tomatoes", "½ onion", "peas"] },
+      { title: "Chicken, mushroom, and barley pot", focus: "A batch-friendly chicken meal with mushrooms and a shelf-stable grain", ingredients: ["1 chicken portion", "½ cup pearl barley", "1 cup mushrooms", "1 carrot", "½ onion", "stock or water"] },
+      { title: "Black bean, sweet potato, and corn bowl", focus: "A second-week bean bowl with root vegetables and corn", ingredients: ["¾ cup black beans", "1 sweet potato", "½ cup corn", "tomato", "plain yoghurt if suitable", "lime or herbs"] },
+      { title: "Tofu cabbage noodle bowl with ginger", focus: "A plant-based second-week noodle meal using cabbage and tofu", ingredients: ["¾ cup tofu", "½ cup wholewheat noodles", "1 cup cabbage", "1 carrot", "ginger", "1 teaspoon oil"] },
+      { title: "Sardine, tomato, and spinach rice pot", focus: "A shelf-stable fish option with rice and greens", ingredients: ["1 sardine portion", "½ cup brown rice", "tinned tomatoes", "1 cup spinach", "½ onion", "herbs"] },
+    ],
+  },
+};
+
 function toRecipe(seed: RecipeSeed, fruit: string, originCountry: FoodCountry): LocationRecipe {
   return { title: seed.title, focus: seed.focus, ingredients: seed.ingredients, steps: ["Prepare the grain, root, or staple using the method that is normal in your home.", "Cook the tomato, onion, protein or beans, and vegetables in stages until tender.", "Taste, adjust seasoning if you use it, and serve with the planned fresh vegetables or fruit."], drink: `Water and ${fruit} later in the day.`, originCountry };
 }
 
-function cityRecipes(country: FoodCountry, city: string, fruit: string): { weekOne: LocationRecipe[]; weekTwo: LocationRecipe[] } | null {
-  const resolved = resolveFoodLocation(country, city);
+function cityRecipes(country: FoodCountry, city: string, fruit: string, matchChoice: CityCountryMatchChoice): { weekOne: LocationRecipe[]; weekTwo: LocationRecipe[] } | null {
+  const resolved = resolveFoodLocation(country, city, matchChoice);
   const pack = resolved.pack;
   if (!pack) return null;
   if (resolved.country === "Canada" && pack.aliases.includes("toronto")) {
     const toronto = COUNTRY_RECIPES.Canada;
     return { weekOne: toronto.weekOne.map((recipe) => toRecipe(recipe, fruit, "Canada")), weekTwo: toronto.weekTwo.map((recipe) => toRecipe(recipe, fruit, "Canada")) };
+  }
+  const auditedCityKey = pack.aliases.includes("vancouver") ? "vancouver" : pack.aliases.includes("montreal") || pack.aliases.includes("montréal") ? "montreal" : null;
+  if (auditedCityKey) {
+    const audited = AUDITED_CITY_RECIPES[auditedCityKey];
+    return { weekOne: audited.weekOne.map((recipe) => toRecipe(recipe, fruit, resolved.country)), weekTwo: audited.weekTwo.map((recipe) => toRecipe(recipe, fruit, resolved.country)) };
   }
   const foods = pack.foods.length ? pack.foods : ["beans", "tomato", "onion", "leafy greens"];
   const create = (title: string, index: number, rotation: string): LocationRecipe => ({
@@ -135,10 +183,10 @@ function cityRecipes(country: FoodCountry, city: string, fruit: string): { weekO
 }
 
 /** Returns a city pack first, then a complete country pack, so every week has different recipe titles. */
-export function locationRecipeWeeks(country: FoodCountry, city: string, fruit: string): { weekOne: LocationRecipe[]; weekTwo: LocationRecipe[] } {
-  const citySpecific = cityRecipes(country, city, fruit);
+export function locationRecipeWeeks(country: FoodCountry, city: string, fruit: string, matchChoice: CityCountryMatchChoice = "auto"): { weekOne: LocationRecipe[]; weekTwo: LocationRecipe[] } {
+  const citySpecific = cityRecipes(country, city, fruit, matchChoice);
   if (citySpecific) return citySpecific;
-  const resolved = resolveFoodLocation(country, city);
+  const resolved = resolveFoodLocation(country, city, matchChoice);
   country = resolved.country;
   if (country === "Nigeria") return { weekOne: [], weekTwo: [
     { title: "Unripe plantain porridge with spinach", focus: "A savoury second-week Nigerian plantain-and-greens pot", ingredients: ["½ unripe plantain", "½ onion", "1 tomato", "1 cup spinach", "fish or beans if suitable"], steps: ["Peel and cube unripe plantain, then simmer in water until almost tender.", "Add tomato, onion, and fish or beans; cook until the plantain softens.", "Fold in spinach just before serving."], drink: `Water and ${fruit} later in the day.` },
@@ -212,7 +260,7 @@ const BREAKFAST_RECIPES: Record<FoodCountry, RecipeSeed[]> = {
 };
 
 /** Breakfast uses the same resolved country boundary as lunch and dinner; it cannot silently fall back to a Nigerian template. */
-export function locationBreakfastRecipes(country: FoodCountry, city: string, fruit: string): LocationRecipe[] {
-  const resolved = resolveFoodLocation(country, city);
+export function locationBreakfastRecipes(country: FoodCountry, city: string, fruit: string, matchChoice: CityCountryMatchChoice = "auto"): LocationRecipe[] {
+  const resolved = resolveFoodLocation(country, city, matchChoice);
   return BREAKFAST_RECIPES[resolved.country].map((recipe) => toRecipe(recipe, fruit, resolved.country));
 }

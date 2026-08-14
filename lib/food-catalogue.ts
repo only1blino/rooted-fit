@@ -1,4 +1,5 @@
 export type FoodCountry = "Nigeria" | "Ghana" | "Kenya" | "South Africa" | "United Kingdom" | "United States" | "Canada" | "Other";
+export type CityCountryMatchChoice = "auto" | "confirmed" | "manual";
 
 export const COUNTRY_OPTIONS: FoodCountry[] = ["Nigeria", "Ghana", "Kenya", "South Africa", "United Kingdom", "United States", "Canada", "Other"];
 
@@ -67,7 +68,7 @@ const CITY_PACKS: Record<FoodCountry, CityFoodPack[]> = {
   Canada: [
     { aliases: ["toronto", "north york", "scarborough", "etobicoke", "mississauga", "brampton", "markham"], label: "Toronto and GTA market cues", foods: ["Ontario apples", "Potatoes", "Carrots", "Cabbage", "Mushrooms", "Frozen vegetables", "Tinned salmon", "Red lentils"], meals: ["Lentil and vegetable soup", "Salmon and potato bowl", "Bean and vegetable chilli", "Mushroom barley stew", "Sheet-pan chicken with root vegetables", "Tofu vegetable stir-fry"], fruits: ["Apple", "Pear", "Berries"] },
     { aliases: ["vancouver", "surrey", "burnaby", "richmond"], label: "Metro Vancouver market cues", foods: ["Salmon", "Tofu", "Bok choy", "Mushrooms", "Brown rice", "Frozen edamame"], meals: ["Salmon rice bowl", "Tofu and bok choy stir-fry", "Vegetable lentil soup"], fruits: ["Berries", "Apple"] },
-    { aliases: ["montreal", "laval", "longueuil"], label: "Montréal market cues", foods: ["Lentils", "Potatoes", "Carrots", "Cabbage", "Eggs", "Tinned fish"], meals: ["Lentil vegetable soup", "Potato and bean skillet", "Tinned fish salad with bread"], fruits: ["Apple", "Pear"] },
+    { aliases: ["montreal", "montréal", "laval", "longueuil"], label: "Montréal market cues", foods: ["Lentils", "Potatoes", "Carrots", "Cabbage", "Eggs", "Tinned fish"], meals: ["Lentil vegetable soup", "Potato and bean skillet", "Tinned fish salad with bread"], fruits: ["Apple", "Pear"] },
   ],
   Other: [
     { aliases: ["mumbai", "delhi", "bengaluru", "bangalore", "hyderabad", "pune"], label: "Indian city market cues", foods: ["Toor dal", "Chickpeas", "Okra", "Cumin", "Turmeric"], meals: ["Dal and rice", "Chana masala", "Vegetable khichdi"], fruits: ["Guava", "Papaya"] },
@@ -86,44 +87,62 @@ const CITY_PACKS: Record<FoodCountry, CityFoodPack[]> = {
 
 function unique(values: string[]) { return Array.from(new Set(values)); }
 
-export type ResolvedFoodLocation = { country: FoodCountry; city: string; pack: CityFoodPack | null; isCityMatch: boolean };
+export type ResolvedFoodLocation = { country: FoodCountry; city: string; pack: CityFoodPack | null; isCityMatch: boolean; matchChoice: CityCountryMatchChoice };
 
 /** Resolves a known city globally so an accidentally retained default country cannot leak another cuisine into the plan. */
-export function resolveFoodLocation(country: FoodCountry, city = ""): ResolvedFoodLocation {
+export function resolveFoodLocation(country: FoodCountry, city = "", matchChoice: CityCountryMatchChoice = "auto"): ResolvedFoodLocation {
   const normalized = city.trim().toLowerCase();
+  if (matchChoice === "manual") {
+    const pack = CITY_PACKS[country].find((candidate) => candidate.aliases.some((alias) => normalized.includes(alias))) ?? null;
+    return { country, city: city.trim(), pack, isCityMatch: Boolean(pack), matchChoice };
+  }
   for (const [candidateCountry, packs] of Object.entries(CITY_PACKS) as [FoodCountry, CityFoodPack[]][]) {
     const pack = packs.find((candidate) => candidate.aliases.some((alias) => normalized.includes(alias)));
-    if (pack) return { country: candidateCountry, city: city.trim(), pack, isCityMatch: true };
+    if (pack) return { country: candidateCountry, city: city.trim(), pack, isCityMatch: true, matchChoice };
   }
-  return { country, city: city.trim(), pack: null, isCityMatch: false };
+  return { country, city: city.trim(), pack: null, isCityMatch: false, matchChoice };
 }
 
-export function cityFoodPack(country: FoodCountry, city = "") {
-  return resolveFoodLocation(country, city).pack;
+export function cityFoodPack(country: FoodCountry, city = "", matchChoice: CityCountryMatchChoice = "auto") {
+  return resolveFoodLocation(country, city, matchChoice).pack;
 }
 
-export function locationSuggestionLabel(country: FoodCountry, city = "") {
-  const resolved = resolveFoodLocation(country, city);
+export function locationSuggestionLabel(country: FoodCountry, city = "", matchChoice: CityCountryMatchChoice = "auto") {
+  const resolved = resolveFoodLocation(country, city, matchChoice);
   const pack = resolved.pack;
   if (pack) return pack.label;
   return city.trim() ? `${city.trim()}, ${country} starter suggestions` : `${country} starter suggestions`;
 }
 
-export function suggestedFoods(country: FoodCountry, city = "") { const resolved = resolveFoodLocation(country, city); return unique([...(resolved.pack?.foods ?? []), ...CATALOGUES[resolved.country]]).slice(0, 50); }
-export function suggestedFruits(country: FoodCountry, city = "") { const resolved = resolveFoodLocation(country, city); return unique([...(resolved.pack?.fruits ?? []), ...FRUITS[resolved.country]]).slice(0, 12); }
-export function suggestedMeals(country: FoodCountry, city = "") { const resolved = resolveFoodLocation(country, city); return unique([...(resolved.pack?.meals ?? []), ...MEAL_SUGGESTIONS[resolved.country]]); }
+export function suggestedFoods(country: FoodCountry, city = "", matchChoice: CityCountryMatchChoice = "auto") { const resolved = resolveFoodLocation(country, city, matchChoice); return unique([...(resolved.pack?.foods ?? []), ...CATALOGUES[resolved.country]]).slice(0, 50); }
+export function suggestedFruits(country: FoodCountry, city = "", matchChoice: CityCountryMatchChoice = "auto") { const resolved = resolveFoodLocation(country, city, matchChoice); return unique([...(resolved.pack?.fruits ?? []), ...FRUITS[resolved.country]]).slice(0, 12); }
+export function suggestedMeals(country: FoodCountry, city = "", matchChoice: CityCountryMatchChoice = "auto") { const resolved = resolveFoodLocation(country, city, matchChoice); return unique([...(resolved.pack?.meals ?? []), ...MEAL_SUGGESTIONS[resolved.country]]); }
 /** Cultural meal ideas are displayed only after the user explicitly elects a food heritage; they never alter a city default on their own. */
 export function heritageMealSuggestions(preferences: FoodCountry[]) { return unique(preferences.flatMap((country) => MEAL_SUGGESTIONS[country])); }
 
 /** Seasonal cues are optional market prompts, not a claim that each item is guaranteed or affordable today. */
-export function seasonalFoodCues(country: FoodCountry, city = "", date = new Date()) {
-  const resolved = resolveFoodLocation(country, city);
+export function seasonalFoodCues(country: FoodCountry, city = "", date = new Date(), matchChoice: CityCountryMatchChoice = "auto") {
+  const resolved = resolveFoodLocation(country, city, matchChoice);
+  const month = date.getMonth() + 1;
   if (resolved.country === "Canada" && resolved.pack?.aliases.includes("toronto")) {
-    const month = date.getMonth() + 1;
     if ([6, 7, 8, 9].includes(month)) return ["Ontario berries or peaches", "Sweet corn", "Field tomatoes", "Broccoli or green beans"];
     if ([10, 11].includes(month)) return ["Ontario apples or pears", "Winter squash", "Carrots", "Cabbage or kale"];
     if ([12, 1, 2, 3].includes(month)) return ["Ontario apples from storage", "Carrots", "Potatoes", "Greenhouse tomatoes or peppers"];
     return ["Rhubarb or greenhouse strawberries", "Asparagus", "Mushrooms", "Greenhouse greens"];
+  }
+  if (resolved.country === "Canada" && resolved.pack?.aliases.includes("vancouver")) {
+    if ([6, 7, 8, 9].includes(month)) return ["B.C. berries", "Bok choy", "Snap beans", "Local tomatoes or cucumbers"];
+    if ([10, 11].includes(month)) return ["B.C. apples", "Mushrooms", "Cabbage", "Carrots or squash"];
+    if ([12, 1, 2, 3].includes(month)) return ["B.C. apples from storage", "Mushrooms", "Cabbage", "Greenhouse vegetables"];
+    return ["Asparagus", "B.C. greens", "Mushrooms", "Greenhouse vegetables"];
+  }
+  if (resolved.country === "Canada" && (resolved.pack?.aliases.includes("montreal") || resolved.pack?.aliases.includes("montréal"))) {
+    if (month === 5) return ["Québec asparagus", "Fiddleheads", "Mushrooms", "Potatoes"];
+    if (month === 6) return ["Québec strawberries", "Spinach", "Green onions", "Rhubarb"];
+    if (month === 7) return ["Québec raspberries", "Broccoli", "Zucchini", "Kale"];
+    if (month === 8) return ["Québec carrots", "Blueberries", "Tomatoes", "Beans or leeks"];
+    if (month === 9) return ["Québec apples", "Peppers", "Mushrooms", "Potatoes"];
+    return ["Québec potatoes", "Cabbage", "Mushrooms", "Greenhouse tomatoes or peppers"];
   }
   return [];
 }

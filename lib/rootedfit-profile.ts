@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { seasonalFoodCues, type FoodCountry } from "./food-catalogue";
+import { seasonalFoodCues, type CityCountryMatchChoice, type FoodCountry } from "./food-catalogue";
 import { locationBreakfastRecipes, locationRecipeWeeks } from "./location-recipes";
 
 export type ShoppingFrequency = "daily" | "weekly" | "biweekly" | "monthly";
@@ -17,6 +17,7 @@ export type CityRecipeRating = { recipeTitle: string; score: 1 | 2 | 3 | 4 | 5; 
 export type UserProfile = {
   city: string;
   country: FoodCountry;
+  cityCountryMatchChoice: CityCountryMatchChoice;
   foodHeritagePreferences: FoodCountry[];
   electricityHoursPerDay: number;
   marketMinutesAway: number;
@@ -174,6 +175,7 @@ export const resourceChangeFeedbackStorageKey = "rootedfit.resource-change-feedb
 export const emptyProfile: UserProfile = {
   city: "",
   country: "Nigeria",
+  cityCountryMatchChoice: "auto",
   foodHeritagePreferences: [],
   electricityHoursPerDay: 0,
   marketMinutesAway: 0,
@@ -214,6 +216,7 @@ function normaliseProfile(profile: Partial<UserProfile>): UserProfile {
   return {
     ...emptyProfile,
     ...profile,
+    cityCountryMatchChoice: profile.cityCountryMatchChoice === "confirmed" || profile.cityCountryMatchChoice === "manual" ? profile.cityCountryMatchChoice : "auto",
     foodHeritagePreferences: Array.isArray(profile.foodHeritagePreferences) ? profile.foodHeritagePreferences.filter((country): country is FoodCountry => typeof country === "string") : [],
     kitchenEquipment: profile.kitchenEquipment ?? [],
     otherKitchenEquipment: profile.otherKitchenEquipment ?? [],
@@ -810,7 +813,7 @@ function preferRatedRecipes<T extends { title: string }>(recipes: T[], ratings: 
 }
 
 export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
-  const localSeasonalCues = seasonalFoodCues(profile.country, profile.city);
+  const localSeasonalCues = seasonalFoodCues(profile.country, profile.city, new Date(), profile.cityCountryMatchChoice);
   const localIngredients = profile.localIngredients.length ? profile.localIngredients : localSeasonalCues.length ? localSeasonalCues : ["tomato", "onion", "leafy greens"];
   const storageNote = foodStorageNote(profile);
   const goal = goalCopy(profile.goal);
@@ -843,7 +846,7 @@ export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
     { title: "Sukuma wiki with ugali", focus: "Leafy greens and maize staple with flexible local substitutions", ingredients: ["2 cups sukuma wiki, kale, collards, or spinach", "½ onion", "1 tomato", "1 clove garlic", "1 teaspoon oil", "½ cup maize flour", "1¼ cups water"], steps: ["Bring the water to a boil and gradually stir in maize flour until it becomes a smooth, firm ugali; keep stirring until cooked through.", "Cook onion and garlic in oil, then add tomato and cook until soft.", "Add the greens with a small splash of water and cook until tender.", "Serve the sukuma wiki beside the ugali."], drink: "Water or unsweetened ginger tea." },
     { title: "Chapati-style bean and vegetable stew", focus: "A practical bean stew paired with a familiar flatbread when available", ingredients: ["1 chapati or other flatbread", "½ cup cooked beans", "½ onion", "1 tomato", "½ carrot", "1 teaspoon oil", "Pinch of cumin or coriander if available"], steps: ["Cook onion, carrot, and tomato in the oil until softened.", "Add the beans, season with a pinch of cumin or coriander if you use it, and simmer with a little water for 5 minutes.", "Warm the chapati or use another familiar flatbread.", "Serve the bean stew with the flatbread and any cucumber or greens you have."], drink: `Water with ${fruit}.` },
   ];
-  const localizedRecipeWeeks = locationRecipeWeeks(profile.country, profile.city, fruit);
+  const localizedRecipeWeeks = locationRecipeWeeks(profile.country, profile.city, fruit, profile.cityCountryMatchChoice);
   const regionalRecipes = localizedRecipeWeeks.weekOne.length ? localizedRecipeWeeks.weekOne : profile.country === "Ghana" ? ghanaRecipes : profile.country === "Kenya" ? kenyaRecipes : nigeriaRecipes;
   const weekTwoRecipes: Omit<MealDay, "day" | "label" | "storageNote" | "equipmentNote">[] = [
     { title: "Tomato egg and vegetable rice bowl", focus: "A quick tomato-and-egg main meal with vegetables and a moderate rice base", ingredients: ["½ cup rice", "2 eggs", "1 tomato", "¼ onion", "1 cup cabbage, spinach, or other greens", "1 teaspoon oil"], steps: ["Cook the rice until tender and set aside.", "Cook onion and tomato in the oil until soft, then add the greens.", "Beat the eggs into the vegetables and fold until just set.", "Serve the egg and vegetable mixture over the rice."], drink: "Water or unsweetened tea." },
@@ -871,7 +874,7 @@ export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
   const usableRecipes = usesAnimalFoods ? availableRecipes : plantBasedRecipes.length ? plantBasedRecipes : availableRecipes;
   const makeMeal = (recipe: Omit<MealDay, "day" | "label" | "storageNote" | "equipmentNote" | "sourceTitle">, day: number, label: string) => { const focus = focusMealDetails(profile.goal, applyServingPreference(recipe.ingredients, profile.servingSize)); return { ...recipe, sourceTitle: recipe.title, title: `${focus.titlePrefix}${recipe.title}`, ingredients: focus.ingredients, focus: `${recipe.focus}. ${focus.note}`, day, label, storageNote, equipmentNote: recipeEquipmentNote }; };
   const mealPlan = labels.map((label, index) => makeMeal(usableRecipes.length ? usableRecipes[index % usableRecipes.length] : ratedRotationRecipes[0], index + 1, label));
-  const localizedBreakfastRecipes = locationBreakfastRecipes(profile.country, profile.city, fruit);
+  const localizedBreakfastRecipes = locationBreakfastRecipes(profile.country, profile.city, fruit, profile.cityCountryMatchChoice);
   const breakfastCandidates = localizedBreakfastRecipes.filter((recipe) => !excluded.some((item) => `${recipe.title} ${recipe.ingredients.join(" ")}`.toLowerCase().includes(item)) && !profile.excludedRecipeTitles.includes(recipe.title));
   const breakfastPlantBased = breakfastCandidates.filter((recipe) => !/(egg|yoghurt|milk)/i.test(`${recipe.title} ${recipe.ingredients.join(" ")}`));
   const usableBreakfasts = usesAnimalFoods ? breakfastCandidates : breakfastPlantBased.length ? breakfastPlantBased : breakfastCandidates;

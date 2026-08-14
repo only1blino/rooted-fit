@@ -59,3 +59,12 @@ For United Kingdom and United States packs, official guidance supports practical
 6. Food and Agriculture Organization of the United Nations, “Food-based dietary guidelines – Africa”: https://www.fao.org/nutrition/education/dietary-guidelines/regions/africa/en/
 7. NHS, “Eating a balanced diet”: https://www.nhs.uk/live-well/eat-well/how-to-eat-a-balanced-diet/eating-a-balanced-diet/
 8. U.S. Department of Agriculture, “Healthy Eating on a Budget”: https://www.usda.gov/about-usda/news/blog/healthy-eating-budget
+
+## Expanded Tester-City Evidence: Vancouver and Montréal
+
+British Columbia’s Buy BC seasonal directory lists a broad range of local commodities, including albacore tuna, apples, berries, bok choy, broccoli, cabbage, carrots, greenhouse vegetables, mushrooms, potatoes, Pacific halibut, and grains. A Vancouver pack can responsibly use salmon or other Pacific fish when available, tofu, bok choy, mushrooms, rice, edamame, and durable or frozen vegetables. It must not claim every item is available at every retailer or season.
+
+Aliments du Québec’s harvest guide identifies month-specific Québec produce including asparagus and fiddleheads in May; spinach, strawberries, lettuce, green onions, herbs, and rhubarb in June; raspberries, broccoli, zucchini, beets, and kale in July; carrots, blueberries, tomatoes, beans, leeks, and eggplant in August; apples and peppers in September; and squash and turnips in the cold season. It also identifies cranberries, mushrooms, potatoes, cabbage, and greenhouse cucumbers, tomatoes, and peppers as year-round options. A Montréal pack should use these as local market cues alongside legumes, whole grains, eggs, dairy or alternatives, and tinned fish—not as a claim of universal or guaranteed availability.
+
+9. Government of British Columbia, Buy BC, “What’s in season?”: https://buybc.gov.bc.ca/eat-local/whats-in-season/
+10. Aliments du Québec, “Harvest Guide: In Season Fruits and Vegetables”: https://alimentsduquebec.com/en/inspirations-dici/harvest-guide-in-season-fruits-and-vegetables-are-yours-to-enjoy
