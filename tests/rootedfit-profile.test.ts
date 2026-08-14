@@ -14,8 +14,8 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
-import { applyTodayResourceSubstitutions, applyTodayUnavailableResources, buildWeeklyPlan, buildWorkoutSessionPreview, buildWorkoutWhyToday, categorizeGroceryItems, findSimilarRecipe, formatGroceryChecklistPrintHtml, formatGroceryListExport, getTodayResourceSubstituteOptions, isReminderPauseActive, loadCheckIns, loadCompletionRatings, loadExerciseLogs, loadGroceryChecklist, loadMealSwaps, loadMeasurements, loadPlannedSessionReminder, loadProfile, loadProgressPhotos, loadResourceChangeFeedback, loadTodayResourceSubstitutions, loadTodayUnavailableResources, loadWorkoutSessionStates, normaliseReminderTime, normaliseReminderWeekdays, numberOrNull, oneWeekReminderPauseUntil, practicalGroceryItems, reminderMotivationText, rotatingIndexForDate, saveCheckIns, saveCompletionRatings, saveExerciseLogs, saveGroceryChecklist, saveMealSwaps, saveMeasurements, savePlannedSessionReminder, saveProfile, saveProgressPhotos, saveResourceChangeFeedback, saveTodayResourceSubstitutions, saveTodayUnavailableResources, saveWorkoutSessionStates, splitList, type UserProfile } from "../lib/rootedfit-profile";
-import { suggestedFoods, suggestedFruits, suggestedMeals } from "../lib/food-catalogue";
+import { applyTodayResourceSubstitutions, applyTodayUnavailableResources, buildGymResultSummary, buildMonthProgressSummary, buildWeeklyPlan, buildWorkoutSessionPreview, buildWorkoutWhyToday, categorizeGroceryItems, findSimilarRecipe, formatGroceryChecklistPrintHtml, formatGroceryListExport, getTodayResourceSubstituteOptions, isReminderPauseActive, loadCheckIns, loadCompletionRatings, loadExerciseLogs, loadGroceryChecklist, loadMealSwaps, loadMeasurements, loadPlannedSessionReminder, loadProfile, loadProgressPhotos, loadResourceChangeFeedback, loadTodayResourceSubstitutions, loadTodayUnavailableResources, loadWorkoutSessionStates, normaliseReminderTime, normaliseReminderWeekdays, numberOrNull, oneWeekReminderPauseUntil, practicalGroceryItems, reminderMotivationText, rotatingIndexForDate, saveCheckIns, saveCompletionRatings, saveExerciseLogs, saveGroceryChecklist, saveMealSwaps, saveMeasurements, savePlannedSessionReminder, saveProfile, saveProgressPhotos, saveResourceChangeFeedback, saveTodayResourceSubstitutions, saveTodayUnavailableResources, saveWorkoutSessionStates, splitList, type UserProfile } from "../lib/rootedfit-profile";
+import { locationSuggestionLabel, suggestedFoods, suggestedFruits, suggestedMeals } from "../lib/food-catalogue";
 
 const microwaveProfile: UserProfile = {
   city: "Lagos",
@@ -61,10 +61,10 @@ describe("RootedFit weekly plan builder", () => {
 
     expect(plan.meals).toHaveLength(7);
     expect(plan.workouts).toHaveLength(7);
-    expect(plan.meals[0].title).toContain("Nigerian jollof rice");
+    expect(plan.meals[0].title).toContain("Ewedu with amala");
     expect(plan.meals[0].equipmentNote).toContain("microwave-only kitchen");
     expect(plan.meals[0].storageNote).toContain("same-day portions");
-    expect(plan.shoppingGroups.flatMap((group) => group.items)).toContain("Rice — 1 kg or a smaller bag");
+    expect(plan.shoppingGroups.flatMap((group) => group.items).join(" ")).toMatch(/Ewedu|Waterleaf|Banga spice/);
     expect(plan.workouts[1].videoUrl).toContain("youtube.com");
     expect(plan.workouts[1].videoTitle).toContain("PILATES");
     expect(plan.dailyMeals[0].slots).toHaveLength(3);
@@ -91,7 +91,7 @@ describe("RootedFit weekly plan builder", () => {
     expect(suggestedFoods("Nigeria")).not.toContain("Moi moi");
     expect(suggestedMeals("Nigeria")).toContain("Moi moi");
     expect(JSON.stringify(plan.meals).toLowerCase()).not.toContain("eggs");
-    expect(plan.meals[0].ingredients[0]).toMatch(/^¾ cup parboiled rice/);
+    expect(plan.meals[0].ingredients[0]).toBe("Ewedu");
   });
 
   it("uses localized recipe packs for Ghana and Kenya", () => {
@@ -137,11 +137,11 @@ describe("RootedFit weekly plan builder", () => {
 
     expect(weekOne.meals[0].title).not.toEqual(weekTwo.meals[0].title);
     expect(weekTwo.rotationLabel).toContain("Week 2");
-    expect(weekTwo.meals[0].ingredients).toContain("½ cup rice");
-    expect(lighter.meals[0].ingredients).toContain("⅓ cup rice");
-    expect(generous.meals[0].ingredients).toContain("¾ cup rice");
-    expect(lighter.shoppingGroups.flatMap((group) => group.items)).toContain("Rice — 1 kg or a smaller bag");
-    expect(generous.shoppingGroups.flatMap((group) => group.items)).toContain("Rice — 1 kg or a smaller bag");
+    expect(weekTwo.meals[0].ingredients[0]).toBe("Banga spice");
+    expect(lighter.meals[0].ingredients[0]).toBe("Banga spice");
+    expect(generous.meals[0].ingredients[0]).toBe("Banga spice");
+    expect(lighter.shoppingGroups.flatMap((group) => group.items).join(" ")).toMatch(/Banga spice|Waterleaf|Ewedu/);
+    expect(generous.shoppingGroups.flatMap((group) => group.items).join(" ")).toMatch(/Banga spice|Waterleaf|Ewedu/);
   });
 
   it("provides seven distinct day-by-day home workouts instead of a repeated two-session library", () => {
@@ -350,5 +350,40 @@ describe("RootedFit weekly plan builder", () => {
     await saveCompletionRatings(ratings);
 
     await expect(loadCompletionRatings()).resolves.toEqual(ratings);
+  });
+
+  it("changes suggested ingredients, meal ideas, and recipe titles from the city rather than using one generic fallback", () => {
+    expect(locationSuggestionLabel("Kenya", "Mombasa")).toContain("Coastal Kenya");
+    expect(suggestedFoods("Kenya", "Mombasa").slice(0, 4)).toEqual(expect.arrayContaining(["Coconut milk", "Tamarind"]));
+    expect(suggestedMeals("Other", "Manila").slice(0, 3)).toEqual(expect.arrayContaining(["Mung bean stew", "Chicken tinola"]));
+    expect(suggestedFruits("Other", "Addis Ababa").slice(0, 3)).toContain("Papaya");
+
+    expect(buildWeeklyPlan({ ...microwaveProfile, country: "Kenya", city: "Mombasa" }).meals[0].title).toContain("Coconut fish stew");
+    expect(buildWeeklyPlan({ ...microwaveProfile, country: "Other", city: "Manila" }).meals[0].title).toContain("Mung bean stew");
+  });
+
+  it("uses genuinely distinct first- and second-week recipe sets for country and city packs", () => {
+    const ukWeekOne = buildWeeklyPlan({ ...microwaveProfile, country: "United Kingdom", city: "London", rotationWeek: 1 });
+    const ukWeekTwo = buildWeeklyPlan({ ...microwaveProfile, country: "United Kingdom", city: "London", rotationWeek: 2 });
+    const kenyaWeekOne = buildWeeklyPlan({ ...microwaveProfile, country: "Kenya", city: "Nairobi", rotationWeek: 1 });
+    const kenyaWeekTwo = buildWeeklyPlan({ ...microwaveProfile, country: "Kenya", city: "Nairobi", rotationWeek: 2 });
+
+    expect(new Set(ukWeekOne.meals.map((meal) => meal.sourceTitle)).size).toBeGreaterThan(2);
+    expect(ukWeekOne.meals.map((meal) => meal.sourceTitle)).not.toEqual(ukWeekTwo.meals.map((meal) => meal.sourceTitle));
+    expect(kenyaWeekOne.meals.map((meal) => meal.sourceTitle)).not.toEqual(kenyaWeekTwo.meals.map((meal) => meal.sourceTitle));
+  });
+
+  it("summarizes gym results and month-on-month progress from locally stored check-ins and measurements", () => {
+    const checkIns = [
+      { id: "a", date: "2026-08-14", steps: 6000, mood: "good" as const, followedMealIdea: true, completedMovement: true, note: "" },
+      { id: "b", date: "2026-08-13", steps: 5000, mood: "steady" as const, followedMealIdea: true, completedMovement: true, note: "" },
+      { id: "c", date: "2026-07-20", steps: 3000, mood: "low" as const, followedMealIdea: false, completedMovement: true, note: "" },
+    ];
+    const measurements = [
+      { id: "new", date: "2026-08-14", weightKg: 70, waistCm: 80, hipCm: null, chestCm: null, upperArmCm: null, thighCm: null, unit: "ft_in_kg" as const, note: "" },
+      { id: "old", date: "2026-07-10", weightKg: 72, waistCm: 83, hipCm: null, chestCm: null, upperArmCm: null, thighCm: null, unit: "ft_in_kg" as const, note: "" },
+    ];
+    expect(buildGymResultSummary(checkIns, "2026-08-14")).toMatchObject({ completedSessions: 2, mealDays: 2, currentStreak: 2 });
+    expect(buildMonthProgressSummary(checkIns, measurements, "2026-08-14")).toMatchObject({ comparisonReady: true, weightDifferenceKg: -2, waistDifferenceCm: -3 });
   });
 });

@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { FoodCountry } from "@/lib/food-catalogue";
+import { locationRecipeWeeks } from "./location-recipes";
 
 export type ShoppingFrequency = "daily" | "weekly" | "biweekly" | "monthly";
 export type MealFrequency = "one_plus_snack" | "two" | "three";
@@ -822,7 +823,8 @@ export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
     { title: "Sukuma wiki with ugali", focus: "Leafy greens and maize staple with flexible local substitutions", ingredients: ["2 cups sukuma wiki, kale, collards, or spinach", "½ onion", "1 tomato", "1 clove garlic", "1 teaspoon oil", "½ cup maize flour", "1¼ cups water"], steps: ["Bring the water to a boil and gradually stir in maize flour until it becomes a smooth, firm ugali; keep stirring until cooked through.", "Cook onion and garlic in oil, then add tomato and cook until soft.", "Add the greens with a small splash of water and cook until tender.", "Serve the sukuma wiki beside the ugali."], drink: "Water or unsweetened ginger tea." },
     { title: "Chapati-style bean and vegetable stew", focus: "A practical bean stew paired with a familiar flatbread when available", ingredients: ["1 chapati or other flatbread", "½ cup cooked beans", "½ onion", "1 tomato", "½ carrot", "1 teaspoon oil", "Pinch of cumin or coriander if available"], steps: ["Cook onion, carrot, and tomato in the oil until softened.", "Add the beans, season with a pinch of cumin or coriander if you use it, and simmer with a little water for 5 minutes.", "Warm the chapati or use another familiar flatbread.", "Serve the bean stew with the flatbread and any cucumber or greens you have."], drink: `Water with ${fruit}.` },
   ];
-  const regionalRecipes = profile.country === "Ghana" ? ghanaRecipes : profile.country === "Kenya" ? kenyaRecipes : nigeriaRecipes;
+  const localizedRecipeWeeks = locationRecipeWeeks(profile.country, profile.city, fruit);
+  const regionalRecipes = localizedRecipeWeeks.weekOne.length ? localizedRecipeWeeks.weekOne : profile.country === "Ghana" ? ghanaRecipes : profile.country === "Kenya" ? kenyaRecipes : nigeriaRecipes;
   const weekTwoRecipes: Omit<MealDay, "day" | "label" | "storageNote" | "equipmentNote">[] = [
     { title: "Tomato egg and vegetable rice bowl", focus: "A quick tomato-and-egg main meal with vegetables and a moderate rice base", ingredients: ["½ cup rice", "2 eggs", "1 tomato", "¼ onion", "1 cup cabbage, spinach, or other greens", "1 teaspoon oil"], steps: ["Cook the rice until tender and set aside.", "Cook onion and tomato in the oil until soft, then add the greens.", "Beat the eggs into the vegetables and fold until just set.", "Serve the egg and vegetable mixture over the rice."], drink: "Water or unsweetened tea." },
     { title: "Beans, greens, and roasted plantain bowl", focus: "A satisfying bean-based bowl with vegetables and a small plantain side", ingredients: ["¾ cup cooked beans", "½ ripe plantain", "½ onion", "1 tomato", "1 cup leafy greens", "1 teaspoon oil"], steps: ["Cook onion and tomato in oil until soft.", "Add cooked beans and a little water; simmer for 5 minutes.", "Fold in greens until softened.", "Bake, air-fry, or pan-cook plantain with minimal oil and serve alongside."], drink: "Water or unsweetened hibiscus drink made with safe water." },
@@ -841,7 +843,7 @@ export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
     { title: "Tofu and vegetable breakfast scramble", focus: "A plant-based, quick breakfast with vegetables and a small bread portion", ingredients: ["¾ cup firm tofu", "1 tomato", "¼ onion", "½ cup greens", "1 slice bread", "1 teaspoon oil"], steps: ["Crumble tofu with a fork.", "Cook onion and tomato in the oil, then add tofu and greens.", "Fold until hot and serve with one slice of bread."], drink: "Water or unsweetened tea." },
     { title: "Milk or soy milk fruit smoothie with boiled egg", focus: "A quick, light breakfast for days with a blender or ready-to-drink milk", ingredients: ["1 cup milk or fortified soy milk", `1 portion ${fruit}`, "¼ cup oats", "1 boiled egg"], steps: ["Blend milk, fruit, and oats if you have a blender, or stir the oats into the milk and eat with fruit.", "Serve with a boiled egg.", "Use a no-cook beans option instead if egg does not fit your preferences."], drink: "Water if you are thirsty; the smoothie is part of the meal." },
   ];
-  const rotationRecipes = profile.rotationWeek === 2 ? weekTwoRecipes : regionalRecipes;
+  const rotationRecipes = profile.rotationWeek === 2 ? (localizedRecipeWeeks.weekTwo.length ? localizedRecipeWeeks.weekTwo : weekTwoRecipes) : regionalRecipes;
   const restrictionSafeRecipes = rotationRecipes.filter((recipe) => !excluded.some((item) => `${recipe.title} ${recipe.ingredients.join(" ")}`.toLowerCase().includes(item)));
   const availableRecipes = restrictionSafeRecipes.filter((recipe) => !profile.excludedRecipeTitles.includes(recipe.title));
   const plantBasedRecipes = availableRecipes.filter((recipe) => !/(chicken|fish|egg|catfish)/i.test(`${recipe.title} ${recipe.ingredients.join(" ")}`));
@@ -927,4 +929,46 @@ export function buildMotivationalMessage(checkIns: DailyCheckIn[], goal: Wellnes
   if (goal === "toning") return "Strength grows through calm, repeatable effort—not one perfect workout.";
   if (goal === "core_mobility") return "A few controlled minutes can be meaningful movement. Start where your body is today.";
   return "Choose the next realistic action, not the perfect one.";
+}
+
+export type GymResultSummary = { completedSessions: number; mealDays: number; currentStreak: number; label: string };
+export type MonthProgressSummary = { currentMovementDays: number; previousMovementDays: number; currentMealDays: number; previousMealDays: number; weightDifferenceKg: number | null; waistDifferenceCm: number | null; comparisonReady: boolean };
+
+function dateDaysBefore(date: string, days: number) {
+  const parsed = new Date(`${date}T12:00:00`);
+  parsed.setDate(parsed.getDate() - days);
+  return parsed.toISOString().slice(0, 10);
+}
+
+export function buildGymResultSummary(checkIns: DailyCheckIn[], today = formatToday()): GymResultSummary {
+  const recent = checkIns.filter((entry) => entry.date >= dateDaysBefore(today, 6) && entry.date <= today);
+  const completedSessions = recent.filter((entry) => entry.completedMovement).length;
+  const mealDays = recent.filter((entry) => entry.followedMealIdea).length;
+  let currentStreak = 0;
+  for (let offset = 0; offset < 31; offset += 1) {
+    const date = dateDaysBefore(today, offset);
+    if (checkIns.some((entry) => entry.date === date && entry.completedMovement)) currentStreak += 1;
+    else break;
+  }
+  const label = completedSessions === 0 ? "Your next session can be short and still count." : completedSessions === 1 ? "One movement session logged this week." : `${completedSessions} movement sessions logged this week.`;
+  return { completedSessions, mealDays, currentStreak, label };
+}
+
+export function buildMonthProgressSummary(checkIns: DailyCheckIn[], measurements: BodyMeasurement[], today = formatToday()): MonthProgressSummary {
+  const currentStart = dateDaysBefore(today, 29);
+  const previousStart = dateDaysBefore(today, 59);
+  const inRange = (date: string, start: string, end: string) => date >= start && date <= end;
+  const current = checkIns.filter((entry) => inRange(entry.date, currentStart, today));
+  const previous = checkIns.filter((entry) => inRange(entry.date, previousStart, dateDaysBefore(currentStart, 1)));
+  const newest = measurements.find((entry) => entry.date >= currentStart) ?? measurements[0];
+  const baseline = measurements.filter((entry) => entry.date <= dateDaysBefore(currentStart, 1))[0];
+  return {
+    currentMovementDays: current.filter((entry) => entry.completedMovement).length,
+    previousMovementDays: previous.filter((entry) => entry.completedMovement).length,
+    currentMealDays: current.filter((entry) => entry.followedMealIdea).length,
+    previousMealDays: previous.filter((entry) => entry.followedMealIdea).length,
+    weightDifferenceKg: newest?.weightKg !== null && newest?.weightKg !== undefined && baseline?.weightKg !== null && baseline?.weightKg !== undefined ? Number((newest.weightKg - baseline.weightKg).toFixed(1)) : null,
+    waistDifferenceCm: newest?.waistCm !== null && newest?.waistCm !== undefined && baseline?.waistCm !== null && baseline?.waistCm !== undefined ? Number((newest.waistCm - baseline.waistCm).toFixed(1)) : null,
+    comparisonReady: Boolean(baseline && newest && baseline.id !== newest.id),
+  };
 }

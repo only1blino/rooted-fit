@@ -140,3 +140,9 @@
 - [x] Add selectable or custom motivational quotes for reminder messages
 - [x] Rotate RootedFit’s daily motivational message by date instead of repeating it
 - [x] Add regression coverage, validate, publish, and push the expanded reminders release
+- [x] Make food, ingredients, and recipe suggestions meaningfully city and country aware beyond Nigeria and Ghana
+- [x] Ensure Week 1 and Week 2 use genuinely distinct recipe rotations for every supported location pack
+- [x] Reduce text-heavy screens with clearer visual hierarchy and practical illustrations
+- [x] Add a gym-results summary card to the local progress tracker
+- [x] Add a month-on-month progress tracker for locally stored check-ins and measurements
+- [x] Add regression coverage, validate, publish, and push the personalized content and progress release
