@@ -185,4 +185,4 @@
 - [x] Confirm the deployed beta URL and GitHub main branch match the current RootedFit release
 - [x] Audit and refine Plan, Meals, and Workouts visual hierarchy, spacing, and interaction clarity
 - [x] Add consistent polished UI feedback and accessibility improvements across web and Expo
-- [ ] Validate, publish, and push the UI/UX refinement release
+- [x] Validate, publish, and push the UI/UX refinement release
