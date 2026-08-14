@@ -156,4 +156,4 @@
 - [x] Stop Nigerian and other regional recipes from appearing outside their matching city/country unless explicitly requested
 - [x] Add locality, seasonality, and optional diaspora-preference controls to onboarding and meal planning
 - [x] Build evidence-informed two-week city recipe packs with enough genuinely local variety
-- [ ] Add location-integrity regression tests, validate, publish, and push the rebuilt meal engine
+- [x] Add location-integrity regression tests, validate, publish, and push the rebuilt meal engine
