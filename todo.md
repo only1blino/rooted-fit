@@ -177,4 +177,4 @@
 - [x] Define city-aware thumbnail mapping for RootedFit recipe cards
 - [x] Create lightweight city-specific recipe thumbnail visual assets
 - [x] Add responsive thumbnails to concise Meals cards across web and Expo
-- [ ] Test, validate, publish, and push the city-thumbnail release
+- [x] Test, validate, publish, and push the city-thumbnail release
