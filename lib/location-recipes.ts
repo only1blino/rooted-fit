@@ -101,8 +101,11 @@ function cityRecipes(country: FoodCountry, city: string, fruit: string): { weekO
     steps: ["Prepare the staple using the method that is normal in your home.", "Cook the chosen vegetables with the beans, egg, fish, or other preferred protein until tender.", "Serve the practical portion with a fresh vegetable or fruit if available."],
     drink: `Water and ${fruit} later in the day.`,
   });
-  const titles = [...pack.meals, ...pack.meals, ...pack.meals];
-  return { weekOne: titles.slice(0, 7).map((title, index) => create(title, index, "A first-week choice")), weekTwo: titles.slice(2, 9).map((title, index) => create(title, index + 2, "A distinct second-week choice")) };
+  const weekOneLabels = ["market plate", "weekday pot", "fresh-side bowl", "home-style supper", "pantry-friendly plate", "light meal-day option", "family-table variation"];
+  const weekTwoLabels = ["second-week greens variation", "different staple variation", "vegetable-forward pot", "fresh-market plate", "bean or protein variation", "lighter meal-day option", "new-week supper"];
+  const weekOneTitles = Array.from({ length: 7 }, (_, index) => `${pack.meals[index % pack.meals.length]} · ${weekOneLabels[index]}`);
+  const weekTwoTitles = Array.from({ length: 7 }, (_, index) => `${pack.meals[(index + 1) % pack.meals.length]} · ${weekTwoLabels[index]}`);
+  return { weekOne: weekOneTitles.map((title, index) => create(title, index, "A first-week choice")), weekTwo: weekTwoTitles.map((title, index) => create(title, index + 2, "A distinct second-week choice")) };
 }
 
 /** Returns a city pack first, then a complete country pack, so every week has different recipe titles. */

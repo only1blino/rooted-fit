@@ -150,3 +150,5 @@
 - [x] Add a clear monthly progress trend chart to Tracker
 - [x] Add location packs for cities represented in current beta feedback where available
 - [x] Add regression coverage, validate, publish, and push the city ratings and trend-chart release
+- [x] Fix Week 1 and Week 2 so every selected location shows visibly distinct meal schedules
+- [x] Add regression coverage, validate, publish, and push the corrected two-week rotation release

@@ -372,6 +372,8 @@ describe("RootedFit weekly plan builder", () => {
     expect(new Set(ukWeekOne.meals.map((meal) => meal.sourceTitle)).size).toBeGreaterThan(2);
     expect(ukWeekOne.meals.map((meal) => meal.sourceTitle)).not.toEqual(ukWeekTwo.meals.map((meal) => meal.sourceTitle));
     expect(kenyaWeekOne.meals.map((meal) => meal.sourceTitle)).not.toEqual(kenyaWeekTwo.meals.map((meal) => meal.sourceTitle));
+    expect(new Set(kenyaWeekOne.meals.map((meal) => meal.sourceTitle)).size).toBe(7);
+    expect(kenyaWeekOne.meals.map((meal) => meal.sourceTitle).filter((title) => kenyaWeekTwo.meals.some((meal) => meal.sourceTitle === title))).toEqual([]);
   });
 
   it("summarizes gym results and month-on-month progress from locally stored check-ins and measurements", () => {
