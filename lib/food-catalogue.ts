@@ -70,6 +70,9 @@ const CITY_PACKS: Record<FoodCountry, CityFoodPack[]> = {
     { aliases: ["dar es salaam", "dar", "arusha", "dodoma"], label: "Tanzanian city market cues", foods: ["Cassava", "Coconut milk", "Pigeon peas", "Sukuma wiki"], meals: ["Maharage ya nazi", "Ugali and greens", "Rice and bean stew"], fruits: ["Mango", "Coconut"] },
     { aliases: ["kampala", "entebbe"], label: "Ugandan city market cues", foods: ["Matoke", "Groundnut paste", "Silver fish", "Beans"], meals: ["Matoke with groundnut sauce", "Beans and sweet potato", "Rice with greens"], fruits: ["Jackfruit", "Pineapple"] },
     { aliases: ["kingston", "montego bay"], label: "Jamaican city market cues", foods: ["Callaloo", "Red peas", "Scotch bonnet", "Breadfruit"], meals: ["Rice and peas", "Callaloo and eggs", "Red pea soup"], fruits: ["Mango", "Soursop"] },
+    { aliases: ["kigali", "ruanda", "rwanda"], label: "Kigali market cues", foods: ["Cassava leaves", "Beans", "Sweet potatoes", "Plantain", "Tilapia"], meals: ["Isombe with beans", "Sweet potatoes and beans", "Plantain and vegetable stew"], fruits: ["Avocado", "Papaya"] },
+    { aliases: ["lusaka", "ndola", "kitwe"], label: "Zambian city market cues", foods: ["Mealie meal", "Rape greens", "Groundnut paste", "Beans", "Dried fish"], meals: ["Nshima with greens and beans", "Groundnut relish with sweet potato", "Beans and rape with nshima"], fruits: ["Mango", "Guava"] },
+    { aliases: ["dakar", "thies", "saint-louis"], label: "Dakar market cues", foods: ["Millet", "Black-eyed peas", "Peanut paste", "Fresh fish", "Cassava"], meals: ["Thieboudienne-style fish and rice", "Mafe peanut stew", "Black-eyed pea and millet bowl"], fruits: ["Mango", "Baobab fruit"] },
   ],
 };
 

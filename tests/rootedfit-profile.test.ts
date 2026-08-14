@@ -14,7 +14,7 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
-import { applyTodayResourceSubstitutions, applyTodayUnavailableResources, buildGymResultSummary, buildMonthProgressSummary, buildWeeklyPlan, buildWorkoutSessionPreview, buildWorkoutWhyToday, categorizeGroceryItems, findSimilarRecipe, formatGroceryChecklistPrintHtml, formatGroceryListExport, getTodayResourceSubstituteOptions, isReminderPauseActive, loadCheckIns, loadCompletionRatings, loadExerciseLogs, loadGroceryChecklist, loadMealSwaps, loadMeasurements, loadPlannedSessionReminder, loadProfile, loadProgressPhotos, loadResourceChangeFeedback, loadTodayResourceSubstitutions, loadTodayUnavailableResources, loadWorkoutSessionStates, normaliseReminderTime, normaliseReminderWeekdays, numberOrNull, oneWeekReminderPauseUntil, practicalGroceryItems, reminderMotivationText, rotatingIndexForDate, saveCheckIns, saveCompletionRatings, saveExerciseLogs, saveGroceryChecklist, saveMealSwaps, saveMeasurements, savePlannedSessionReminder, saveProfile, saveProgressPhotos, saveResourceChangeFeedback, saveTodayResourceSubstitutions, saveTodayUnavailableResources, saveWorkoutSessionStates, splitList, type UserProfile } from "../lib/rootedfit-profile";
+import { applyTodayResourceSubstitutions, applyTodayUnavailableResources, buildGymResultSummary, buildMonthlyTrendSeries, buildMonthProgressSummary, buildWeeklyPlan, buildWorkoutSessionPreview, buildWorkoutWhyToday, categorizeGroceryItems, findSimilarRecipe, formatGroceryChecklistPrintHtml, formatGroceryListExport, getTodayResourceSubstituteOptions, isReminderPauseActive, loadCheckIns, loadCompletionRatings, loadExerciseLogs, loadGroceryChecklist, loadMealSwaps, loadMeasurements, loadPlannedSessionReminder, loadProfile, loadProgressPhotos, loadResourceChangeFeedback, loadTodayResourceSubstitutions, loadTodayUnavailableResources, loadWorkoutSessionStates, normaliseReminderTime, normaliseReminderWeekdays, numberOrNull, oneWeekReminderPauseUntil, practicalGroceryItems, reminderMotivationText, rotatingIndexForDate, saveCheckIns, saveCompletionRatings, saveExerciseLogs, saveGroceryChecklist, saveMealSwaps, saveMeasurements, savePlannedSessionReminder, saveProfile, saveProgressPhotos, saveResourceChangeFeedback, saveTodayResourceSubstitutions, saveTodayUnavailableResources, saveWorkoutSessionStates, splitList, upsertCityRecipeRating, type UserProfile } from "../lib/rootedfit-profile";
 import { locationSuggestionLabel, suggestedFoods, suggestedFruits, suggestedMeals } from "../lib/food-catalogue";
 
 const microwaveProfile: UserProfile = {
@@ -51,6 +51,7 @@ const microwaveProfile: UserProfile = {
   baselineWaistCm: null,
   baselineHipCm: null,
   baselineChestCm: null,
+  recipeRatings: [],
 };
 
 describe("RootedFit weekly plan builder", () => {
@@ -385,5 +386,29 @@ describe("RootedFit weekly plan builder", () => {
     ];
     expect(buildGymResultSummary(checkIns, "2026-08-14")).toMatchObject({ completedSessions: 2, mealDays: 2, currentStreak: 2 });
     expect(buildMonthProgressSummary(checkIns, measurements, "2026-08-14")).toMatchObject({ comparisonReady: true, weightDifferenceKg: -2, waistDifferenceCm: -3 });
+  });
+
+  it("keeps city recipe ratings local and promotes a higher-rated city recipe in the next rotation", () => {
+    const base = { ...microwaveProfile, country: "Other" as const, city: "Kigali", rotationWeek: 1 as const };
+    const firstPlan = buildWeeklyPlan(base);
+    const preferredTitle = firstPlan.meals[3].sourceTitle!;
+    const rated = upsertCityRecipeRating(base, preferredTitle, 5, "2026-08-14T12:00:00.000Z");
+
+    expect(rated.recipeRatings).toEqual([{ recipeTitle: preferredTitle, score: 5, ratedAt: "2026-08-14T12:00:00.000Z" }]);
+    expect(buildWeeklyPlan(rated).meals[0].sourceTitle).toBe(preferredTitle);
+  });
+
+  it("adds city cues for Kigali, Lusaka, and Dakar and groups recent check-ins into four chart weeks", () => {
+    expect(suggestedMeals("Other", "Kigali")[0]).toContain("Isombe");
+    expect(suggestedFoods("Other", "Lusaka").slice(0, 3)).toContain("Mealie meal");
+    expect(suggestedMeals("Other", "Dakar")[0]).toContain("Thieboudienne");
+
+    const series = buildMonthlyTrendSeries([
+      { id: "today", date: "2026-08-14", steps: 4000, mood: "good", followedMealIdea: true, completedMovement: true, note: "" },
+      { id: "week-two", date: "2026-08-04", steps: 2000, mood: "steady", followedMealIdea: true, completedMovement: false, note: "" },
+    ], "2026-08-14");
+    expect(series).toHaveLength(4);
+    expect(series[3]).toMatchObject({ label: "W4", movementDays: 1, mealDays: 1 });
+    expect(series[2]).toMatchObject({ label: "W3", movementDays: 0, mealDays: 1 });
   });
 });

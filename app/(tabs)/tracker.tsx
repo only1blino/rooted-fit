@@ -8,6 +8,7 @@ import { ScreenContainer } from "@/components/screen-container";
 import {
   buildMotivationalMessage,
   buildGymResultSummary,
+  buildMonthlyTrendSeries,
   buildMonthProgressSummary,
   formatToday,
   loadCheckIns,
@@ -192,6 +193,8 @@ export default function TrackerScreen() {
   const gymResult = buildGymResultSummary(checkIns);
   const monthProgress = buildMonthProgressSummary(checkIns, measurements);
   const movementChange = monthProgress.currentMovementDays - monthProgress.previousMovementDays;
+  const monthlyTrend = buildMonthlyTrendSeries(checkIns);
+  const chartMaximum = Math.max(1, ...monthlyTrend.map((point) => Math.max(point.movementDays, point.mealDays)));
 
   if (isLoading) return <ScreenContainer edges={["top", "bottom", "left", "right"]} style={styles.loading}><ActivityIndicator color="#2D6A4F" /></ScreenContainer>;
 

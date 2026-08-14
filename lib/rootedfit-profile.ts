@@ -12,6 +12,7 @@ export type SweetToothPreference = "none" | "healthier_swaps" | "portion_guidanc
 export type WellnessGoal = "consistency" | "energy" | "toning" | "core_mobility" | "body_composition" | "weight_loss" | "weight_gain" | null;
 export type MeasurementUnit = "ft_in_kg" | "cm_lb";
 export type ProgressPhotoAngle = "front" | "side" | "back";
+export type CityRecipeRating = { recipeTitle: string; score: 1 | 2 | 3 | 4 | 5; ratedAt: string };
 
 export type UserProfile = {
   city: string;
@@ -47,6 +48,7 @@ export type UserProfile = {
   baselineWaistCm: number | null;
   baselineHipCm: number | null;
   baselineChestCm: number | null;
+  recipeRatings?: CityRecipeRating[];
 };
 
 export type MealDay = {
@@ -200,6 +202,7 @@ export const emptyProfile: UserProfile = {
   baselineWaistCm: null,
   baselineHipCm: null,
   baselineChestCm: null,
+  recipeRatings: [],
 };
 
 function normaliseProfile(profile: Partial<UserProfile>): UserProfile {
@@ -221,6 +224,7 @@ function normaliseProfile(profile: Partial<UserProfile>): UserProfile {
     servingSize: profile.servingSize === "lighter" || profile.servingSize === "generous" ? profile.servingSize : "regular",
     workoutDifficulty: profile.workoutDifficulty === "intermediate" || profile.workoutDifficulty === "advanced" ? profile.workoutDifficulty : "beginner",
     rotationWeek: profile.rotationWeek === 2 ? 2 : 1,
+    recipeRatings: Array.isArray(profile.recipeRatings) ? profile.recipeRatings.filter((entry): entry is CityRecipeRating => typeof entry?.recipeTitle === "string" && [1, 2, 3, 4, 5].includes(entry.score)).slice(0, 120) : [],
     measurementUnit: legacyMeasurementUnit === "imperial" ? "ft_in_kg" : legacyMeasurementUnit === "metric" ? "cm_lb" : legacyMeasurementUnit === "cm_lb" ? "cm_lb" : "ft_in_kg",
   };
 }
@@ -790,6 +794,16 @@ export function buildWorkoutSessionPreview(workout: WorkoutDay): WorkoutSessionP
   return { label: `${workout.label} preview`, durationMinutes: workout.durationMinutes, equipment: workout.resourcesUsed, setupChecks };
 }
 
+export function upsertCityRecipeRating(profile: UserProfile, recipeTitle: string, score: 1 | 2 | 3 | 4 | 5, ratedAt = new Date().toISOString()): UserProfile {
+  const ratings = profile.recipeRatings ?? [];
+  return { ...profile, recipeRatings: [...ratings.filter((entry) => entry.recipeTitle !== recipeTitle), { recipeTitle, score, ratedAt }] };
+}
+
+function preferRatedRecipes<T extends { title: string }>(recipes: T[], ratings: CityRecipeRating[] | undefined): T[] {
+  const ratingByTitle = new Map((ratings ?? []).map((entry) => [entry.recipeTitle, entry.score]));
+  return [...recipes].sort((left, right) => (ratingByTitle.get(right.title) ?? 0) - (ratingByTitle.get(left.title) ?? 0));
+}
+
 export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
   const localIngredients = profile.localIngredients.length ? profile.localIngredients : ["tomato", "onion", "leafy greens"];
   const storageNote = foodStorageNote(profile);
@@ -844,12 +858,13 @@ export function buildWeeklyPlan(profile: UserProfile): WeeklyPlan {
     { title: "Milk or soy milk fruit smoothie with boiled egg", focus: "A quick, light breakfast for days with a blender or ready-to-drink milk", ingredients: ["1 cup milk or fortified soy milk", `1 portion ${fruit}`, "¼ cup oats", "1 boiled egg"], steps: ["Blend milk, fruit, and oats if you have a blender, or stir the oats into the milk and eat with fruit.", "Serve with a boiled egg.", "Use a no-cook beans option instead if egg does not fit your preferences."], drink: "Water if you are thirsty; the smoothie is part of the meal." },
   ];
   const rotationRecipes = profile.rotationWeek === 2 ? (localizedRecipeWeeks.weekTwo.length ? localizedRecipeWeeks.weekTwo : weekTwoRecipes) : regionalRecipes;
-  const restrictionSafeRecipes = rotationRecipes.filter((recipe) => !excluded.some((item) => `${recipe.title} ${recipe.ingredients.join(" ")}`.toLowerCase().includes(item)));
+  const ratedRotationRecipes = preferRatedRecipes(rotationRecipes, profile.recipeRatings);
+  const restrictionSafeRecipes = ratedRotationRecipes.filter((recipe) => !excluded.some((item) => `${recipe.title} ${recipe.ingredients.join(" ")}`.toLowerCase().includes(item)));
   const availableRecipes = restrictionSafeRecipes.filter((recipe) => !profile.excludedRecipeTitles.includes(recipe.title));
   const plantBasedRecipes = availableRecipes.filter((recipe) => !/(chicken|fish|egg|catfish)/i.test(`${recipe.title} ${recipe.ingredients.join(" ")}`));
   const usableRecipes = usesAnimalFoods ? availableRecipes : plantBasedRecipes.length ? plantBasedRecipes : availableRecipes;
   const makeMeal = (recipe: Omit<MealDay, "day" | "label" | "storageNote" | "equipmentNote" | "sourceTitle">, day: number, label: string) => { const focus = focusMealDetails(profile.goal, applyServingPreference(recipe.ingredients, profile.servingSize)); return { ...recipe, sourceTitle: recipe.title, title: `${focus.titlePrefix}${recipe.title}`, ingredients: focus.ingredients, focus: `${recipe.focus}. ${focus.note}`, day, label, storageNote, equipmentNote: recipeEquipmentNote }; };
-  const mealPlan = labels.map((label, index) => makeMeal(usableRecipes.length ? usableRecipes[index % usableRecipes.length] : rotationRecipes[0], index + 1, label));
+  const mealPlan = labels.map((label, index) => makeMeal(usableRecipes.length ? usableRecipes[index % usableRecipes.length] : ratedRotationRecipes[0], index + 1, label));
   const breakfastCandidates = breakfastRecipes.filter((recipe) => !excluded.some((item) => `${recipe.title} ${recipe.ingredients.join(" ")}`.toLowerCase().includes(item)) && !profile.excludedRecipeTitles.includes(recipe.title));
   const breakfastPlantBased = breakfastCandidates.filter((recipe) => !/(egg|yoghurt|milk)/i.test(`${recipe.title} ${recipe.ingredients.join(" ")}`));
   const usableBreakfasts = usesAnimalFoods ? breakfastCandidates : breakfastPlantBased.length ? breakfastPlantBased : breakfastCandidates;
@@ -971,4 +986,15 @@ export function buildMonthProgressSummary(checkIns: DailyCheckIn[], measurements
     waistDifferenceCm: newest?.waistCm !== null && newest?.waistCm !== undefined && baseline?.waistCm !== null && baseline?.waistCm !== undefined ? Number((newest.waistCm - baseline.waistCm).toFixed(1)) : null,
     comparisonReady: Boolean(baseline && newest && baseline.id !== newest.id),
   };
+}
+
+export type MonthlyTrendPoint = { label: string; movementDays: number; mealDays: number };
+
+export function buildMonthlyTrendSeries(checkIns: DailyCheckIn[], today = formatToday()): MonthlyTrendPoint[] {
+  return [3, 2, 1, 0].map((weekOffset) => {
+    const end = dateDaysBefore(today, weekOffset * 7);
+    const start = dateDaysBefore(end, 6);
+    const entries = checkIns.filter((entry) => entry.date >= start && entry.date <= end);
+    return { label: `W${4 - weekOffset}`, movementDays: entries.filter((entry) => entry.completedMovement).length, mealDays: entries.filter((entry) => entry.followedMealIdea).length };
+  });
 }

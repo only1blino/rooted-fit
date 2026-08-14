@@ -146,3 +146,7 @@
 - [x] Add a gym-results summary card to the local progress tracker
 - [x] Add a month-on-month progress tracker for locally stored check-ins and measurements
 - [x] Add regression coverage, validate, publish, and push the personalized content and progress release
+- [x] Add locally saved ratings for city-specific recipes that influence future recommendation ordering
+- [x] Add a clear monthly progress trend chart to Tracker
+- [x] Add location packs for cities represented in current beta feedback where available
+- [x] Add regression coverage, validate, publish, and push the city ratings and trend-chart release
