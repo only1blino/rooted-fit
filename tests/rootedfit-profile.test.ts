@@ -17,6 +17,7 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
 import { applyTodayResourceSubstitutions, applyTodayUnavailableResources, buildGymResultSummary, buildMonthlyTrendSeries, buildMonthProgressSummary, buildWeeklyPlan, buildWorkoutSessionPreview, buildWorkoutWhyToday, categorizeGroceryItems, findSimilarRecipe, formatGroceryChecklistPrintHtml, formatGroceryListExport, getTodayResourceSubstituteOptions, isReminderPauseActive, loadCheckIns, loadCompletionRatings, loadExerciseLogs, loadGroceryChecklist, loadMealSwaps, loadMeasurements, loadPlannedSessionReminder, loadProfile, loadProgressPhotos, loadResourceChangeFeedback, loadTodayResourceSubstitutions, loadTodayUnavailableResources, loadWorkoutSessionStates, normaliseReminderTime, normaliseReminderWeekdays, numberOrNull, oneWeekReminderPauseUntil, practicalGroceryItems, reminderMotivationText, rotatingIndexForDate, saveCheckIns, saveCompletionRatings, saveExerciseLogs, saveGroceryChecklist, saveMealSwaps, saveMeasurements, savePlannedSessionReminder, saveProfile, saveProgressPhotos, saveResourceChangeFeedback, saveTodayResourceSubstitutions, saveTodayUnavailableResources, saveWorkoutSessionStates, splitList, subscribeProfile, upsertCityRecipeRating, type UserProfile } from "../lib/rootedfit-profile";
 import { locationSuggestionLabel, resolveFoodLocation, seasonalFoodCues, suggestedFoods, suggestedFruits, suggestedMeals } from "../lib/food-catalogue";
 import { recipeThumbnailFor } from "../lib/recipe-thumbnails";
+import { loadRecipePhotoFavorites, saveRecipePhotoFavorites } from "../lib/rootedfit-profile";
 
 const microwaveProfile: UserProfile = {
   city: "Lagos",
@@ -394,6 +395,14 @@ describe("RootedFit weekly plan builder", () => {
     await saveCompletionRatings(ratings);
 
     await expect(loadCompletionRatings()).resolves.toEqual(ratings);
+  });
+
+  it("persists preferred recipe-photo favorites locally without changing the profile", async () => {
+    const favorites = [{ recipeTitle: "Moi moi with cucumber and tomato", city: "Lagos", thumbnailUrl: "/manus-storage/rootedfit-lagos-recipes_36f98f79.png", savedAt: "2026-08-14T15:00:00.000Z" }];
+
+    await saveRecipePhotoFavorites(favorites);
+
+    await expect(loadRecipePhotoFavorites()).resolves.toEqual(favorites);
   });
 
   it("changes suggested ingredients, meal ideas, and recipe titles from the city rather than using one generic fallback", () => {

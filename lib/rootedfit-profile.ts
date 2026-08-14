@@ -150,6 +150,7 @@ export type TodayResourceSubstitution = { unavailableResource: string; substitut
 export type TodayResourceSubstitutions = { date: string; substitutions: TodayResourceSubstitution[] };
 export type WorkoutSessionPreview = { label: string; durationMinutes: number; equipment: string[]; setupChecks: string[] };
 export type LocalResourceChangeFeedback = { id: string; changeContext: string; outcome: "helpful" | "needs_adjustment"; note: string; createdAt: string; synced: boolean };
+export type LocalRecipePhotoFavorite = { recipeTitle: string; city: string; thumbnailUrl: string; savedAt: string };
 
 export const profileStorageKey = "rootedfit.profile.v2";
 const legacyProfileStorageKey = "rootedfit.profile.v1";
@@ -171,6 +172,7 @@ export const completionRatingsStorageKey = "rootedfit.completion-ratings.v1";
 export const todayUnavailableResourcesStorageKey = "rootedfit.today-unavailable-resources.v1";
 export const todayResourceSubstitutionsStorageKey = "rootedfit.today-resource-substitutions.v1";
 export const resourceChangeFeedbackStorageKey = "rootedfit.resource-change-feedback.v1";
+export const recipePhotoFavoritesStorageKey = "rootedfit.recipe-photo-favorites.v1";
 
 export const emptyProfile: UserProfile = {
   city: "",
@@ -541,7 +543,7 @@ export async function saveProfile(profile: UserProfile) {
 }
 
 export async function clearProfile() {
-  await AsyncStorage.multiRemove([profileStorageKey, legacyProfileStorageKey, checkInsStorageKey, measurementsStorageKey, progressPhotosStorageKey, mealSwapsStorageKey, workoutSessionsStorageKey, plannedSessionReminderStorageKey, waterLogsStorageKey, groceryChecklistStorageKey, exerciseLogsStorageKey, completionRatingsStorageKey, todayUnavailableResourcesStorageKey, todayResourceSubstitutionsStorageKey, resourceChangeFeedbackStorageKey]);
+  await AsyncStorage.multiRemove([profileStorageKey, legacyProfileStorageKey, checkInsStorageKey, measurementsStorageKey, progressPhotosStorageKey, mealSwapsStorageKey, workoutSessionsStorageKey, plannedSessionReminderStorageKey, waterLogsStorageKey, groceryChecklistStorageKey, exerciseLogsStorageKey, completionRatingsStorageKey, todayUnavailableResourcesStorageKey, todayResourceSubstitutionsStorageKey, resourceChangeFeedbackStorageKey, recipePhotoFavoritesStorageKey]);
   notifyProfileListeners(null);
 }
 
@@ -708,6 +710,19 @@ export async function loadCompletionRatings(): Promise<CompletionRating[]> {
 
 export async function saveCompletionRatings(ratings: CompletionRating[]) {
   await AsyncStorage.setItem(completionRatingsStorageKey, JSON.stringify(ratings.slice(0, 180)));
+}
+
+export async function loadRecipePhotoFavorites(): Promise<LocalRecipePhotoFavorite[]> {
+  const saved = await AsyncStorage.getItem(recipePhotoFavoritesStorageKey);
+  if (!saved) return [];
+  try {
+    return (JSON.parse(saved) as LocalRecipePhotoFavorite[]).filter((entry) => typeof entry?.recipeTitle === "string" && typeof entry.city === "string" && typeof entry.thumbnailUrl === "string").slice(0, 120);
+  } catch { return []; }
+}
+
+export async function saveRecipePhotoFavorites(favorites: LocalRecipePhotoFavorite[]) {
+  const unique = Array.from(new Map(favorites.map((favorite) => [`${favorite.city.toLowerCase()}:${favorite.recipeTitle.toLowerCase()}`, favorite])).values()).slice(0, 120);
+  await AsyncStorage.setItem(recipePhotoFavoritesStorageKey, JSON.stringify(unique));
 }
 
 /** Applies a local, today-only gear exclusion without changing the saved home setup. */

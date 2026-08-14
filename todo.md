@@ -178,3 +178,7 @@
 - [x] Create lightweight city-specific recipe thumbnail visual assets
 - [x] Add responsive thumbnails to concise Meals cards across web and Expo
 - [x] Test, validate, publish, and push the city-thumbnail release
+- [ ] Complete unique visual thumbnail coverage for every supported city pack
+- [x] Add tap-to-expand recipe image viewing in the Meals experience
+- [x] Add local saved-photo favorites for recipe visuals
+- [ ] Add coverage regressions, validate, publish, and push the complete recipe-photo release
